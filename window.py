@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import psutil # type: ignore
 import getpass #get user name
+import win32gui
 
 #DEBUG
 DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
@@ -15,8 +16,11 @@ window = ctk.CTk()
 window.geometry("1080x720")
 window.title("Sproutime")
 
-def get_active_app_name(username: str) -> list[psutil.Process]: #update this func
-    return [p for p in psutil.process_iter() if p.username() == username]
+def get_active_app_name():
+    foregroundApp = win32gui.GetForegroundWindow()
+    appTitle = win32gui.GetWindowText(foregroundApp)
+    appName = appTitle.split("-")[-1].strip()
+    return appName
 
 def update_list(): #this is the while true loop
     app_name = get_active_app_name()
