@@ -2,6 +2,7 @@ import customtkinter as ctk
 import psutil # type: ignore
 import getpass #get user name
 import win32gui
+#remove any unsure lib
 
 #DEBUG
 DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
@@ -22,7 +23,16 @@ def get_active_app_name():
     appName = appTitle.split("-")[-1].strip()
     return appName
 
-def update_list(): #this is the while true loop
+def get_all_app_list(): #not updated for window
+    running_app = AppKit.NSWorkspace.sharedWorkspace().runningApplications()
+    app_list = []
+    
+    for app in running_app:
+        if not app.isHidden():
+            app_list.append(app.localizedName())
+    return app_list
+
+def update_loop(): #this is the while true loop
     app_name = get_active_app_name()
     if app_name in app_name_list:
         app_index = app_name_list.index(app_name)
@@ -36,11 +46,11 @@ def update_list(): #this is the while true loop
         
         app_list_TB.insert(f"end", f'{app_name_list[-1]}: {app_time_list[-1]} seconds\n')
 
-    window.after(sleep_time*1000, update_list)
+    window.after(sleep_time*1000, update_loop)
 
 app_list_TB = ctk.CTkTextbox(window, width=1080, height=720)
 app_list_TB.grid(row=0, column=0)
 
-update_list()
+update_loop()
 
 window.mainloop()
