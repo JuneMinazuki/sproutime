@@ -40,7 +40,7 @@ def get_all_app_list():
 
         win32gui.EnumWindows(enumWindowsArguments, None) # Enumerate all top-level windows
 
-    return app_list, PID_list
+    return app_list
 
 def update_loop(): #this is the while true loop
     app_name = get_active_app_name()
