@@ -57,10 +57,16 @@ def update_loop(): #this is the while true loop
         app_list_TB.insert(f"end", f'{app_name_list[-1]}: {app_time_list[-1]} seconds\n')
 
     window.after(sleep_time*1000, update_loop)
+    
+def on_closing(): #when user close the program
+    print("Window is closing!") #temp code
+    window.destroy()
 
 app_list_TB = ctk.CTkTextbox(window, width=1080, height=720)
 app_list_TB.grid(row=0, column=0)
 
 update_loop()
+
+window.protocol("WM_DELETE_WINDOW", on_closing) #check for if user close the program
 
 window.mainloop()
