@@ -1,8 +1,7 @@
 import customtkinter as ctk
 import psutil # type: ignore
-import getpass #get user name
 import win32gui
-#remove any unsure lib
+import win32process
 
 #DEBUG
 DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
@@ -23,13 +22,24 @@ def get_active_app_name():
     appName = appTitle.split("-")[-1].strip()
     return appName
 
-def get_all_app_list(): #not updated for window
-    running_app = AppKit.NSWorkspace.sharedWorkspace().runningApplications()
+def get_all_app_list():
     app_list = []
+    PID_list = []
     
-    for app in running_app:
-        if not app.isHidden():
-            app_list.append(app.localizedName())
+    for process in psutil.process_iter(['pid', 'name']): # Loops through all running processes 
+        pid = process.info['pid']
+
+        def enumWindowsArguments(handle, __): # This will be called for each top-level window to exclude all other background processes (refer to EnumWindows)
+            threadID, foundPID = win32process.GetWindowThreadProcessId(handle) # Get the Process ID for the current window handle
+
+            if foundPID == pid and win32gui.IsWindowVisible(handle): # This checks if it is actually a visible window
+                runningAppName = process.info['name'].split(".")[0].capitalize()
+                if runningAppName not in app_list:
+                    app_list.append(runningAppName)
+                    PID_list.append(pid) # I think this will be needed later when we implement the user task setup
+
+        win32gui.EnumWindows(enumWindowsArguments, None) # Enumerate all top-level windows
+
     return app_list
 
 def update_loop(): #this is the while true loop
