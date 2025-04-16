@@ -23,7 +23,8 @@ def get_all_app_list():
     app_list = []
     
     for app in running_app:
-        if not app.isHidden():
+        launch_date = app.launchDate()
+        if not app.isHidden() and launch_date:
             app_list.append(app.localizedName())
     return app_list
 
@@ -45,6 +46,8 @@ def update_loop():
 
 app_list_TB = ctk.CTkTextbox(window, width=1080, height=720)
 app_list_TB.grid(row=0, column=0)
+
+print(get_all_app_list())
 
 update_loop()
 
