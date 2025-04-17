@@ -15,7 +15,6 @@ root = tk.Tk()
 root.title("Sproutime")
 root.geometry("400x300")  # Set the window size
 
-# Add a label
 label = ttk.Label(root, text="Welcome to Sproutime!")
 label.pack(pady=10)
 
