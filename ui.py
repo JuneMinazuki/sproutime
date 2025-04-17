@@ -20,8 +20,9 @@ label = ttk.Label(root, text="Welcome to Sproutime!")
 label.pack(pady=10)
 
 # Add time display
-label_time = ttk.Label(root, text="", font=("Helvetica", 24))
+label_time = ttk.Label(root, text="", font=("Helvetica", 12))
 label_time.pack(pady=10)
+label_time.place(x=0, y=0)  # Position the label at the top left corner)
 time()  # Call the time function to start updating the label
 
 
