@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from datetime import datetime
 import time
 
@@ -28,8 +28,16 @@ time()  # Call the time function to start updating the label
 
 
 # Add a quit button
-quit_button = ttk.Button(root, text="Quit", command=root.destroy)
+
+def on_closing():
+    if tk.messagebox.askokcancel(title="Quit", message="Do you want to quit?"):
+        root.destroy()
+        # Add a message box to confirm quitting
+quit_button = ttk.Button(root, text="Quit", command=on_closing)
 quit_button.pack(pady=10)
+
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
 
 # Run the application
 root.mainloop()
