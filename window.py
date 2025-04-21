@@ -16,11 +16,15 @@ app_dict = {}
 app_time_list = []
 sleep_time = 1 if DEBUG else 60
 app_index = 1
+temp_quest_app = ""
+temp_quest_time = ""
 
 #App Info
 window = ctk.CTk()
 window.geometry("1080x720")
 window.title("Sproutime")
+window.columnconfigure(1, weight=1)
+window.columnconfigure(1, weight=1)
 
 def get_active_app_name():
     if sys.platform == 'darwin':
@@ -62,6 +66,17 @@ def get_all_app_list():
 
         return app_list
 
+def combobox_callback(choice):
+    global temp_quest_app
+    temp_quest_app = choice
+        
+def timebox_callback(choice):
+    global temp_quest_time
+    temp_quest_time = choice
+        
+def save_quest_time():
+    print(f'Saved! {temp_quest_app}: {temp_quest_time}')
+
 def update_loop(): #this is the while true loop
     app_name = get_active_app_name()
     if app_name in app_dict:
@@ -81,8 +96,26 @@ def on_closing(): #when user close the program
     print("Window is closing!") #temp code
     window.destroy()
 
-app_list_TB = ctk.CTkTextbox(window, width=1080, height=720)
-app_list_TB.grid(row=0, column=0)
+#Textbox
+app_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
+app_list_TB.grid(row=0, column=0, columnspan = 2)
+
+#App Option
+time = ["1 hour", "2 hours", '3 hours']
+app_list = get_all_app_list()
+combobox = ctk.CTkComboBox(master=window,values=app_list, command=combobox_callback)
+combobox.grid(row=1, column=0, padx=20, pady=10, sticky='w')
+temp_quest_app = app_list[0]
+
+#Time Option
+timebox = ctk.CTkComboBox(master=window,values=time, command=timebox_callback)
+timebox.grid(row=1, column=1, padx=20, pady=10, sticky='e')
+temp_quest_time = time[0]
+
+#Button
+button = ctk.CTkButton(master=window, text="Save", command=save_quest_time)
+button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
+
 
 update_loop()
 
