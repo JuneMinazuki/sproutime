@@ -80,7 +80,7 @@ def window():
         
     def on_closing(): #when user close the program
         print("Window is closing!") #temp code
-        window.destroy()
+        sys.exit(0)
     
     app_list_TB = ctk.CTkTextbox(window, width=1080, height=720)
     app_list_TB.grid(row=0, column=0)
