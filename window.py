@@ -75,7 +75,17 @@ def timebox_callback(choice):
     temp_quest_time = choice
         
 def save_quest_time():
-    print(f'Saved! {temp_quest_app}: {temp_quest_time}')
+    with open("quest_log.txt", "a") as file:
+        file.write(f"{temp_quest_app}: {temp_quest_time}")
+    update_quest_list()
+
+def update_quest_list():
+    try:
+        with open("quest_log.txt", "r") as file:
+            for line in file:
+                print(line.strip())  # Use strip() to remove leading/trailing whitespace, including the newline character
+    except FileNotFoundError:
+        print("Error: The file 'quest_log.txt' was not found.")
 
 def update_loop(): #this is the while true loop
     app_name = get_active_app_name()
@@ -101,7 +111,7 @@ app_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
 app_list_TB.grid(row=0, column=0, columnspan = 2)
 
 #App Option
-time = ["1 hour", "2 hours", '3 hours']
+time = [">1 hour", ">2 hours", '>3 hours']
 app_list = get_all_app_list()
 combobox = ctk.CTkComboBox(master=window,values=app_list, command=combobox_callback)
 combobox.grid(row=1, column=0, padx=20, pady=10, sticky='w')
@@ -116,10 +126,11 @@ temp_quest_time = time[0]
 button = ctk.CTkButton(master=window, text="Save", command=save_quest_time)
 button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
 
+#Quest Saved Textbox
+quest_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
+quest_list_TB.grid(row=3, column=0, columnspan = 2)
 
 update_loop()
-
-print(get_all_app_list())
 
 window.protocol("WM_DELETE_WINDOW", on_closing) #check for if user close the program
 
