@@ -9,6 +9,7 @@ def window():
         import psutil
         import win32gui
         import win32process
+        from pywinauto.application import Application
     
     #DEBUG
     DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
@@ -30,7 +31,10 @@ def window():
         elif sys.platform == 'win32': #check if correct for win
             foregroundApp = win32gui.GetForegroundWindow()
             appTitle = win32gui.GetWindowText(foregroundApp)
-            appName = appTitle.split("-")[-1].strip()
+            appName = appTitle.split(" - ")[-1]
+            if appName == "Google Chrome": 
+                tabName = get_active_tab_name()
+                appName = " - ".join([appName, tabName])
             
         return appName
     
@@ -62,6 +66,24 @@ def window():
                     win32gui.EnumWindows(enumWindowsArguments, None) # Enumerate all top-level windows
     
             return app_list
+    
+    def get_active_tab_name():
+        if sys.platform == "darwin":
+            pass
+
+        elif sys.platform == "win32":
+            try:
+                foregroundApp = win32gui.GetForegroundWindow()
+                TID, PID = win32process.GetWindowThreadProcessId(foregroundApp)
+                chromeApp = Application(backend = "uia").connect(process = PID)
+                topWindow = chromeApp.top_window()
+                url = topWindow.child_window(title = "Address and search bar", control_type = "Edit").get_value() # URL is here
+
+                tabName = url.split("/")[0].split(".")[-2].capitalize()
+            except Exception:
+                tabName = "URL not detected"
+
+        return tabName
     
     def update_loop(): #this is the while true loop
         app_name = get_active_app_name()
