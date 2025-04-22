@@ -12,16 +12,20 @@ def window():
 
     #DEBUG
     DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
+    
+    global temp_quest_app, temp_quest_time
 
     app_dict = {}
-    app_time_list = []
     sleep_time = 1 if DEBUG else 60
-    app_index = 1
+    temp_quest_app = ""
+    temp_quest_time = ""
 
     #App Info
     window = ctk.CTk()
     window.geometry("1080x720")
     window.title("Sproutime")
+    window.columnconfigure(1, weight=1)
+    window.columnconfigure(1, weight=1)
 
     def get_active_app_name():
         if sys.platform == 'darwin':
@@ -63,6 +67,56 @@ def window():
 
             return app_list
 
+    def combobox_callback(choice):
+        global temp_quest_app
+        temp_quest_app = choice
+            
+    def timebox_callback(choice):
+        global temp_quest_time
+        temp_quest_time = choice
+            
+    def save_quest_time():
+        global temp_quest_app, temp_quest_time
+        try:
+            with open("quest_log.txt", 'r') as log:
+                lines = log.readlines()
+        except FileNotFoundError:
+            with open("quest_log.txt", "a") as log:
+                log.write(f"{temp_quest_app} : {temp_quest_time}\n")
+            update_quest_list()
+            return
+
+        updated_lines = []
+        found = False
+        for line in lines:
+            if line.startswith(temp_quest_app):
+                parts = line.split(':', 1)
+                if len(parts) == 2:
+                    updated_line = f"{temp_quest_app} : {temp_quest_time}\n"
+                    updated_lines.append(updated_line)
+                    found = True
+                else:
+                    updated_lines.append(line)
+            else:
+                updated_lines.append(line)
+
+        if found:
+            with open("quest_log.txt", 'w') as log:
+                log.writelines(updated_lines)
+        else:
+            with open("quest_log.txt", "a") as log:
+                log.write(f"{temp_quest_app} : {temp_quest_time}\n")
+        update_quest_list()
+
+    def update_quest_list():
+        try:
+            quest_list_TB.delete("0.0", "end")
+            with open("quest_log.txt", "r") as log:
+                for line in log:
+                    quest_list_TB.insert("0.0", f'{line.strip()}\n')
+        except FileNotFoundError:
+            pass
+
     def update_loop(): #this is the while true loop
         app_name = get_active_app_name()
         if app_name in app_dict:
@@ -82,13 +136,37 @@ def window():
         print("Window is closing!") #temp code
         window.destroy()
 
-    app_list_TB = ctk.CTkTextbox(window, width=1080, height=720)
-    app_list_TB.grid(row=0, column=0)
+    #Textbox
+    app_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
+    app_list_TB.grid(row=0, column=0, columnspan = 2)
+
+    time = [">1 hour", ">2 hours", '>3 hours']
+    temp_quest_time = time[0]
+    app_list = get_all_app_list()
+    temp_quest_app = app_list[0]
+    
+    #App Option
+    combobox = ctk.CTkComboBox(master=window,values=app_list, command=combobox_callback)
+    combobox.grid(row=1, column=0, padx=20, pady=10, sticky='w')
+
+    #Time Option
+    timebox = ctk.CTkComboBox(master=window,values=time, command=timebox_callback)
+    timebox.grid(row=1, column=1, padx=20, pady=10, sticky='e')
+
+    #Button
+    button = ctk.CTkButton(master=window, text="Save", command=save_quest_time)
+    button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
+
+    #Quest Saved Textbox
+    quest_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
+    quest_list_TB.grid(row=3, column=0, columnspan = 2)
+    update_quest_list()
 
     update_loop()
-
-    print(get_all_app_list())
 
     window.protocol("WM_DELETE_WINDOW", on_closing) #check for if user close the program
 
     window.mainloop()
+    
+if __name__=="__main__":
+    window()
