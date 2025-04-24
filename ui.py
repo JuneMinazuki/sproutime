@@ -7,6 +7,8 @@ import os
 
 def button_callback():
     print("Start")
+    app._iconify_called_before_window_exists = True
+    app.iconify()
     win()
     
 # Make application window

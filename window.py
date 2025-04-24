@@ -176,7 +176,7 @@ def window():
         
     def on_closing(): #when user close the program
         print("Window is closing!") #temp code
-        window.destroy()
+        sys.exit()
 
     #Textbox
     app_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
