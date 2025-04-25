@@ -1,15 +1,22 @@
 def window():   
-    import customtkinter as ctk
     import sys
 
-    #Check OS
-    if sys.platform == 'darwin':
-        import AppKit
-    elif sys.platform == 'win32': #check if correct for win
-        import psutil
-        import win32gui
-        import win32process
-        from pywinauto.application import Application
+    #Check OS and popup for missing libraries
+    try:
+        import customtkinter as ctk
+
+        if sys.platform == 'darwin':
+            import AppKit
+        elif sys.platform == 'win32': #check if correct for win
+            import psutil
+            import win32gui
+            import win32process
+            import pywinauto.application
+
+    except ModuleNotFoundError as e:
+        import tkinter
+        tkinter.messagebox.showerror("Missing Libraries", str(e))
+        
 
     #DEBUG
     DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
@@ -79,23 +86,36 @@ def window():
             try:
                 foregroundApp = win32gui.GetForegroundWindow()
                 TID, PID = win32process.GetWindowThreadProcessId(foregroundApp)
-                chromeApp = Application(backend = "uia").connect(process = PID)
-                topWindow = chromeApp.top_window()
+                chromeApp = pywinauto.application.Application(backend = "uia").connect(process = PID) # Connects to active Chrome
+                topWindow = chromeApp.top_window() 
                 url = topWindow.child_window(title = "Address and search bar", control_type = "Edit").get_value() # URL is here
 
                 tabName = url.split("/")[0].split(".")[-2].capitalize()
+
             except Exception:
                 tabName = "URL not detected"
 
         return tabName
     
     def combobox_callback(choice):
+        if choice == "Chrome":
+            show_tabBox()
+        else:
+            tabBox.grid_remove()
+
         global temp_quest_app
         temp_quest_app = choice
             
     def timebox_callback(choice):
         global temp_quest_time
         temp_quest_time = choice
+
+    def tabBox_callback(choice):
+        global temp_quest_app
+        if choice == "Any Tab": # For now "Any Tab" will just detect Chrome in General
+            pass
+        else:
+            temp_quest_app = choice
             
     def save_quest_time():
         global temp_quest_app, temp_quest_time
@@ -165,6 +185,7 @@ def window():
     time = [">1 hour", ">2 hours", '>3 hours']
     temp_quest_time = time[0]
     app_list = get_all_app_list()
+    tab_list = ["Any Tab", "Youtube", "Reddit", "Instagram", "Facebook"]
     temp_quest_app = app_list[0]
     
     #App Option
@@ -174,6 +195,11 @@ def window():
     #Time Option
     timebox = ctk.CTkComboBox(master=window,values=time, command=timebox_callback)
     timebox.grid(row=1, column=1, padx=20, pady=10, sticky='e')
+
+    #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
+    tabBox = ctk.CTkComboBox(master=window, values=tab_list, command=tabBox_callback)
+    def show_tabBox():
+        tabBox.grid(row=1, column=1, padx=20, pady=10)
 
     #Button
     button = ctk.CTkButton(master=window, text="Save", command=save_quest_time)
