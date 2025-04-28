@@ -64,14 +64,16 @@ def window():
                 PID_list = []
                 for process in psutil.process_iter(['pid', 'name']): # Loops through all running processes 
                     pid = process.info['pid']
+                    ignored_processes = ["", "Windows Input Experience", "Program Manager"]
 
                     def enumWindowsArguments(handle, __): # This will be called for each top-level window to exclude all other background processes (refer to EnumWindows)
                         threadID, foundPID = win32process.GetWindowThreadProcessId(handle) # Get the Process ID for the current window handle
 
                         if foundPID == pid and win32gui.IsWindowVisible(handle): # This checks if it is actually a visible window
-                            runningAppName = process.info['name'].split(".")[0].capitalize()
-                            if runningAppName not in app_list:
-                                app_list.append(runningAppName)
+                            window_title = win32gui.GetWindowText(handle)
+                            app_name = window_title.split(" - ")[-1]
+                            if app_name not in app_list and app_name not in ignored_processes: 
+                                app_list.append(app_name)
                                 PID_list.append(pid) # I think this will be needed later when we implement the user task setup
 
                     win32gui.EnumWindows(enumWindowsArguments, None) # Enumerate all top-level windows
@@ -98,7 +100,7 @@ def window():
         return tabName
     
     def combobox_callback(choice):
-        if choice == "Chrome":
+        if choice == "Google Chrome":
             show_tabBox()
         else:
             tabBox.grid_remove()
@@ -173,7 +175,7 @@ def window():
             app_list_TB.insert(f"end", f'{list(app_dict.keys())[-1]}: {app_dict[app_name]} seconds\n')
 
         window.after(sleep_time*1000, update_loop)
-        
+
     def on_closing(): #when user close the program
         print("Window is closing!") #temp code
         sys.exit()
