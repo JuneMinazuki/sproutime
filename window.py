@@ -4,6 +4,8 @@ def window():
     #Check OS and popup for missing libraries
     try:
         import customtkinter as ctk
+        import threading
+        from time import sleep
 
         if sys.platform == 'darwin':
             import AppKit
@@ -21,12 +23,16 @@ def window():
     #DEBUG
     DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
     
-    global temp_quest_app, temp_quest_time
+    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, sleep_time, running
 
     app_dict = {}
     sleep_time = 1 if DEBUG else 60
+    new_app = False
+    app_index = 0
     temp_quest_app = ""
     temp_quest_time = ""
+    running = False
+    counter_lock = threading.Lock()
 
     #App Info
     window = ctk.CTk()
@@ -164,39 +170,48 @@ def window():
         except FileNotFoundError:
             pass
 
-    def update_loop(): #this is the while true loop
-        app_name = get_active_app_name()
-        try:
-            with open('quest_log.txt', 'r') as file:
-                quests = file.readlines()
-                if quests == "":
-                    pass
+    def update_time():
+        global app_name, app_dict, app_index, new_app, sleep_time, running
+        
+        while running:
+            with counter_lock:
+                app_name = get_active_app_name()
+                if app_name in app_dict:
+                    new_app = False
+                    app_index = list(app_dict.keys()).index(app_name) +1
+                    app_dict[app_name] += sleep_time
                 else:
-                    for quest in quests:
-                        quest_name = quest.split(" : ")[0]
-                        if quest_name == app_name:
-                            if app_name != "":
-                                if app_name in app_dict:
-                                    app_index = list(app_dict.keys()).index(app_name) +1
-                                    app_dict[app_name] += sleep_time
+                    new_app = True
+                    app_dict[app_name] = sleep_time
 
-                                    app_list_TB.delete(f"{app_index}.0", f"{app_index}.end")
-                                    app_list_TB.insert(f"{app_index}.0", f'{list(app_dict.keys())[app_index -1]}: {app_dict[app_name]} seconds')
-                                else:
-                                    app_dict[app_name] = sleep_time
-                                    
-                                    app_list_TB.insert(f"end", f'{list(app_dict.keys())[-1]}: {app_dict[app_name]} seconds\n')
-                            else:
-                                pass
-        except FileNotFoundError:
+            sleep(sleep_time)
+
+    def update_loop(): #this is the while true loop
+        global app_name, app_dict, app_index, new_app
+        
+        try:
+            if new_app:
+                app_list_TB.insert(f"end", f'{list(app_dict.keys())[-1]}: {app_dict[app_name]} seconds\n')
+            else:
+                app_list_TB.delete(f"{app_index}.0", f"{app_index}.end")
+                app_list_TB.insert(f"{app_index}.0", f'{list(app_dict.keys())[app_index -1]}: {app_dict[app_name]} seconds')
+        except:
             pass
 
         window.after(sleep_time*1000, update_loop)
 
     def on_closing(): #when user close the program
+        global running
+        
+        running = False
+        
+        p1.join()
+        
         print("Window is closing!") #temp code
         sys.exit()
 
+    running = True
+    
     #Textbox
     app_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
     app_list_TB.grid(row=0, column=0, columnspan = 2)
@@ -228,7 +243,11 @@ def window():
     quest_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
     quest_list_TB.grid(row=3, column=0, columnspan = 2)
     update_quest_list()
-
+    
+    #First load
+    p1 = threading.Thread(target=update_time)
+    
+    p1.start()                      
     update_loop()
 
     window.protocol("WM_DELETE_WINDOW", on_closing) #check for if user close the program
