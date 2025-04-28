@@ -45,7 +45,10 @@ def window():
             appName = appTitle.split(" - ")[-1]
             if appName == "Google Chrome": 
                 tabName = get_active_tab_name()
-                appName = " - ".join([appName, tabName])
+                if tabName == "URL not detected":
+                    pass
+                else:
+                    appName = tabName
             
         return appName
 
@@ -163,16 +166,30 @@ def window():
 
     def update_loop(): #this is the while true loop
         app_name = get_active_app_name()
-        if app_name in app_dict:
-            app_index = list(app_dict.keys()).index(app_name) +1
-            app_dict[app_name] += sleep_time
+        try:
+            with open('quest_log.txt', 'r') as file:
+                quests = file.readlines()
+                if quests == "":
+                    pass
+                else:
+                    for quest in quests:
+                        quest_name = quest.split(" : ")[0]
+                        if quest_name == app_name:
+                            if app_name != "":
+                                if app_name in app_dict:
+                                    app_index = list(app_dict.keys()).index(app_name) +1
+                                    app_dict[app_name] += sleep_time
 
-            app_list_TB.delete(f"{app_index}.0", f"{app_index}.end")
-            app_list_TB.insert(f"{app_index}.0", f'{list(app_dict.keys())[app_index -1]}: {app_dict[app_name]} seconds')
-        else:
-            app_dict[app_name] = sleep_time
-            
-            app_list_TB.insert(f"end", f'{list(app_dict.keys())[-1]}: {app_dict[app_name]} seconds\n')
+                                    app_list_TB.delete(f"{app_index}.0", f"{app_index}.end")
+                                    app_list_TB.insert(f"{app_index}.0", f'{list(app_dict.keys())[app_index -1]}: {app_dict[app_name]} seconds')
+                                else:
+                                    app_dict[app_name] = sleep_time
+                                    
+                                    app_list_TB.insert(f"end", f'{list(app_dict.keys())[-1]}: {app_dict[app_name]} seconds\n')
+                            else:
+                                pass
+        except FileNotFoundError:
+            pass
 
         window.after(sleep_time*1000, update_loop)
 
