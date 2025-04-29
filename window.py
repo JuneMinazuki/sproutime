@@ -162,6 +162,12 @@ def window():
                 log.write(f"{temp_quest_app} : {temp_quest_time}\n")
         update_quest_list()
 
+    def refresh_app_list():
+        global app_list
+        app_list = get_all_app_list()
+        
+        app_dropdown.configure(values=app_list)
+
     def update_quest_list():
         try:
             quest_list_TB.delete("0.0", "end")
@@ -233,19 +239,23 @@ def window():
     temp_quest_app = app_list[0]
     
     #App Option
-    combobox = ctk.CTkComboBox(master=window,values=app_list, command=combobox_callback)
-    combobox.grid(row=1, column=0, padx=20, pady=10, sticky='w')
+    app_dropdown = ctk.CTkComboBox(master=window,values=app_list, command=combobox_callback)
+    app_dropdown.grid(row=1, column=0, padx=20, pady=10, sticky='w')
 
     #Time Option
-    timebox = ctk.CTkComboBox(master=window,values=time, command=timebox_callback)
-    timebox.grid(row=1, column=1, padx=20, pady=10, sticky='e')
+    time_dropdown = ctk.CTkComboBox(master=window,values=time, command=timebox_callback)
+    time_dropdown.grid(row=1, column=1, padx=20, pady=10, sticky='e')
 
     #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
     tabBox = ctk.CTkComboBox(master=window, values=tab_list, command=tabBox_callback)
     def show_tabBox():
         tabBox.grid(row=1, column=1, padx=20, pady=10)
+        
+    #Refresh Button
+    button = ctk.CTkButton(master=window, text="Refresh", command=refresh_app_list)
+    button.grid(row=2, column=0, padx=20, pady=10, sticky='e')
 
-    #Button
+    #Save Button
     button = ctk.CTkButton(master=window, text="Save", command=save_quest_time)
     button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
 
