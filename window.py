@@ -9,7 +9,7 @@ def window():
 
         if sys.platform == 'darwin':
             import AppKit
-        elif sys.platform == 'win32': #check if correct for win
+        elif sys.platform == 'win32':
             import psutil
             import win32gui
             import win32process
@@ -33,6 +33,7 @@ def window():
     temp_quest_time = ""
     running = False
     counter_lock = threading.Lock()
+    quest_list = []
 
     #App Info
     window = ctk.CTk()
@@ -45,13 +46,16 @@ def window():
         if sys.platform == 'darwin':
             appName = AppKit.NSWorkspace.sharedWorkspace().activeApplication()['NSApplicationName']
             
-        elif sys.platform == 'win32': #check if correct for win
+        elif sys.platform == 'win32':
             foregroundApp = win32gui.GetForegroundWindow()
             appTitle = win32gui.GetWindowText(foregroundApp)
             appName = appTitle.split(" - ")[-1]
             if appName == "Google Chrome": 
                 tabName = get_active_tab_name()
-                appName = " - ".join([appName, tabName])
+                if tabName == "URL not detected":
+                    pass
+                else:
+                    appName = tabName
             
         return appName
 
@@ -70,14 +74,16 @@ def window():
                 PID_list = []
                 for process in psutil.process_iter(['pid', 'name']): # Loops through all running processes 
                     pid = process.info['pid']
+                    ignored_processes = ["", "Windows Input Experience", "Program Manager"]
 
                     def enumWindowsArguments(handle, __): # This will be called for each top-level window to exclude all other background processes (refer to EnumWindows)
                         threadID, foundPID = win32process.GetWindowThreadProcessId(handle) # Get the Process ID for the current window handle
 
                         if foundPID == pid and win32gui.IsWindowVisible(handle): # This checks if it is actually a visible window
-                            runningAppName = process.info['name'].split(".")[0].capitalize()
-                            if runningAppName not in app_list:
-                                app_list.append(runningAppName)
+                            window_title = win32gui.GetWindowText(handle)
+                            app_name = window_title.split(" - ")[-1]
+                            if app_name not in app_list and app_name not in ignored_processes: 
+                                app_list.append(app_name)
                                 PID_list.append(pid) # I think this will be needed later when we implement the user task setup
 
                     win32gui.EnumWindows(enumWindowsArguments, None) # Enumerate all top-level windows
@@ -104,7 +110,7 @@ def window():
         return tabName
     
     def combobox_callback(choice):
-        if choice == "Chrome":
+        if choice == "Google Chrome":
             show_tabBox()
         else:
             tabBox.grid_remove()
@@ -162,6 +168,8 @@ def window():
             with open("quest_log.txt", "r") as log:
                 for line in log:
                     quest_list_TB.insert("0.0", f'{line.strip()}\n')
+                    quest_name = line.split(" : ")[0]
+                    quest_list.append(quest_name)
         except FileNotFoundError:
             pass
 
@@ -171,25 +179,32 @@ def window():
         while running:
             with counter_lock:
                 app_name = get_active_app_name()
-                if app_name in app_dict:
-                    new_app = False
-                    app_index = list(app_dict.keys()).index(app_name) +1
-                    app_dict[app_name] += 1
+                if quest_list:
+                    if app_name in quest_list:
+                        if app_name in app_dict:
+                            new_app = False
+                            app_index = list(app_dict.keys()).index(app_name) +1
+                            app_dict[app_name] += 1
+                        else:
+                            new_app = True
+                            app_dict[app_name] = 1
+                    else:
+                        pass
+                    sleep(1)
                 else:
-                    new_app = True
-                    app_dict[app_name] = 1
-
-            sleep(1)
+                    pass
 
     def update_loop(): #this is the while true loop
         global app_name, app_dict, app_index, new_app
         
         try:
-            if new_app:
-                app_list_TB.insert(f"end", f'{list(app_dict.keys())[-1]}: {app_dict[app_name]} seconds\n')
-            else:
-                app_list_TB.delete(f"{app_index}.0", f"{app_index}.end")
-                app_list_TB.insert(f"{app_index}.0", f'{list(app_dict.keys())[app_index -1]}: {app_dict[app_name]} seconds')
+            if app_name in quest_list:
+                if new_app:
+                    app_list_TB.insert(f"end", f'{app_name}: {app_dict[app_name]} seconds\n')
+                    new_app = False
+                else:
+                    app_list_TB.delete(f"{app_index}.0", f"{app_index}.end")
+                    app_list_TB.insert(f"{app_index}.0", f'{app_name}: {app_dict[app_name]} seconds')
         except:
             pass
 
@@ -214,7 +229,7 @@ def window():
     time = [">1 hour", ">2 hours", '>3 hours']
     temp_quest_time = time[0]
     app_list = get_all_app_list()
-    tab_list = ["Any Tab", "Youtube", "Reddit", "Instagram", "Facebook"]
+    tab_list = ["Youtube", "Reddit", "Instagram", "Facebook"]
     temp_quest_app = app_list[0]
     
     #App Option
