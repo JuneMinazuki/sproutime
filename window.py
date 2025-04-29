@@ -23,10 +23,10 @@ def window():
     #DEBUG
     DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
     
-    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, sleep_time, running
+    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, update_tick, running
 
     app_dict = {}
-    sleep_time = 1 if DEBUG else 60
+    update_tick = 1 if DEBUG else 60
     new_app = False
     app_index = 0
     temp_quest_app = ""
@@ -166,7 +166,7 @@ def window():
             pass
 
     def update_time():
-        global app_name, app_dict, app_index, new_app, sleep_time, running
+        global app_name, app_dict, app_index, new_app, running
         
         while running:
             with counter_lock:
@@ -174,12 +174,12 @@ def window():
                 if app_name in app_dict:
                     new_app = False
                     app_index = list(app_dict.keys()).index(app_name) +1
-                    app_dict[app_name] += sleep_time
+                    app_dict[app_name] += 1
                 else:
                     new_app = True
-                    app_dict[app_name] = sleep_time
+                    app_dict[app_name] = 1
 
-            sleep(sleep_time)
+            sleep(1)
 
     def update_loop(): #this is the while true loop
         global app_name, app_dict, app_index, new_app
@@ -193,7 +193,7 @@ def window():
         except:
             pass
 
-        window.after(sleep_time*1000, update_loop)
+        window.after(update_tick*1000, update_loop)
         
     def on_closing(): #when user close the program
         global running
