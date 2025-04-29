@@ -6,6 +6,7 @@ def window():
         import customtkinter as ctk
         import threading
         from time import sleep
+        import sqlite3
 
         if sys.platform == 'darwin':
             import AppKit
@@ -18,12 +19,33 @@ def window():
     except ModuleNotFoundError as e:
         import tkinter
         tkinter.messagebox.showerror("Missing Libraries", str(e))
-        
 
     #DEBUG
     DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
     
     global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, update_tick, running
+    
+    #SQLite Setup
+    conn = sqlite3.connect('sproutime.db')
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS quest (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                app_name TEXT NOT NULL,
+                time INTEGER NOT NULL,
+                maximum INTEGER NOT NULL
+            )
+        ''')
+        
+        if DEBUG:
+            cursor.execute(f"DELETE FROM quest")
+            conn.commit()
+        
+    except sqlite3.Error as e:
+        if DEBUG: print(f"An error occurred: {e}")
+        conn.rollback()
 
     app_dict = {}
     update_tick = 1 if DEBUG else 60
@@ -131,6 +153,19 @@ def window():
             
     def save_quest_time():
         global temp_quest_app, temp_quest_time
+        
+        #Pending changes from UI time drop-box update
+        maximum_map = {">":1, "<":0}
+        maximum = maximum_map.get(list(temp_quest_app)[0])
+        temp_quest_time = temp_quest_time[1:]
+        
+        try:
+            cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (temp_quest_app, temp_quest_time, maximum))
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        
         try:
             with open("quest_log.txt", 'r') as log:
                 lines = log.readlines()
