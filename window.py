@@ -93,7 +93,6 @@ def window():
                         app_list.append(app.localizedName())
                         
             elif sys.platform == 'win32':
-                PID_list = []
                 for process in psutil.process_iter(['pid', 'name']): # Loops through all running processes 
                     pid = process.info['pid']
                     ignored_processes = ["", "Windows Input Experience", "Program Manager"]
@@ -106,7 +105,6 @@ def window():
                             app_name = window_title.split(" - ")[-1]
                             if app_name not in app_list and app_name not in ignored_processes: 
                                 app_list.append(app_name)
-                                PID_list.append(pid) # I think this will be needed later when we implement the user task setup
 
                     win32gui.EnumWindows(enumWindowsArguments, None) # Enumerate all top-level windows
 
@@ -146,10 +144,7 @@ def window():
 
     def tabBox_callback(choice):
         global temp_quest_app
-        if choice == "Any Tab": # For now "Any Tab" will just detect Chrome in General
-            pass
-        else:
-            temp_quest_app = choice
+        temp_quest_app = choice
    
     def refresh_app_list():
         global app_list
