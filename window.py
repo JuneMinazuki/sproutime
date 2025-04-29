@@ -32,7 +32,7 @@ def window():
     try:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS quest (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id INTEGER PRIMARY KEY,
                 app_name TEXT NOT NULL,
                 time INTEGER NOT NULL,
                 maximum INTEGER NOT NULL
@@ -42,6 +42,9 @@ def window():
         if DEBUG:
             cursor.execute(f"DELETE FROM quest")
             conn.commit()
+            
+            with open("quest_log.txt", "w") as log:
+                log.write("")
         
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
@@ -155,25 +158,24 @@ def window():
         global temp_quest_app, temp_quest_time
         
         #Pending changes from UI time drop-box update
-        maximum_map = {">":1, "<":0}
-        maximum = maximum_map.get(list(temp_quest_app)[0])
-        temp_quest_time = temp_quest_time[1:]
+        maximum_map = {'>':1, '<':0}
+        time_map = {'1 hour':60, '2 hours':120, '3 hours':180}
+        maximum = maximum_map.get(list(temp_quest_time)[0])
+        temp_quest_time = time_map.get(temp_quest_time[1:])
         
         try:
-            cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (temp_quest_app, temp_quest_time, maximum))
+            cursor.execute("SELECT COUNT(*) FROM quest WHERE app_name = ?", (temp_quest_app)) #Check for duplicate
+            result = cursor.fetchone()
+            
+            if result and result[0] > 0:
+                cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE name = ?", (temp_quest_time, maximum, temp_quest_app))
+            else:
+                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (temp_quest_app, temp_quest_time, maximum))
             conn.commit()
+
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
             conn.rollback()
-        
-        try:
-            with open("quest_log.txt", 'r') as log:
-                lines = log.readlines()
-        except FileNotFoundError:
-            with open("quest_log.txt", "a") as log:
-                log.write(f"{temp_quest_app} : {temp_quest_time}\n")
-            update_quest_list()
-            return
 
         updated_lines = []
         found = False
@@ -257,6 +259,8 @@ def window():
         running = False
         
         p1.join()
+        
+        conn.close()
         
         print("Window is closing!") #temp code
         sys.exit()
