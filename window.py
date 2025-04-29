@@ -191,13 +191,18 @@ def window():
             for quest in quests:
                 maximum = ">" if quest[1] == 1 else "<"
                 time = quest[2] / 60
-                print(quest)
+
                 quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{time} hour\n')
                 
                 quest_list.append(quest[0])
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
             conn.rollback()
+
+    def delete_quest():
+        global temp_quest_app
+        cursor.execute("DELETE FROM quest WHERE app_name = ?", (temp_quest_app,))
+        update_quest_list()
 
     def update_time():
         global app_name, app_dict, app_index, new_app, running
@@ -266,7 +271,7 @@ def window():
 
     #Time Option
     time_dropdown = ctk.CTkComboBox(master=window,values=time, command=timebox_callback)
-    time_dropdown.grid(row=1, column=1, padx=20, pady=10, sticky='e')
+    time_dropdown.grid(row=1, column=2, padx=20, pady=10, sticky='e')
 
     #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
     tabBox = ctk.CTkComboBox(master=window, values=tab_list, command=tabBox_callback)
@@ -274,12 +279,16 @@ def window():
         tabBox.grid(row=1, column=1, padx=20, pady=10)
         
     #Refresh Button
-    button = ctk.CTkButton(master=window, text="Refresh", command=refresh_app_list)
-    button.grid(row=2, column=0, padx=20, pady=10, sticky='e')
+    refresh_button = ctk.CTkButton(master=window, text="Refresh", command=refresh_app_list)
+    refresh_button.grid(row=2, column=0, padx=20, pady=10, sticky='e')
+    
+    #Delete Button
+    delete_button = ctk.CTkButton(master=window, text="Delete", command=delete_quest)
+    delete_button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
 
     #Save Button
-    button = ctk.CTkButton(master=window, text="Save", command=save_quest_time)
-    button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
+    save_button = ctk.CTkButton(master=window, text="Save", command=save_quest_time)
+    save_button.grid(row=2, column=2, padx=20, pady=10, sticky='e')
 
     #Quest Saved Textbox
     quest_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
