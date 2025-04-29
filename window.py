@@ -9,7 +9,7 @@ def window():
 
         if sys.platform == 'darwin':
             import AppKit
-        elif sys.platform == 'win32': #check if correct for win
+        elif sys.platform == 'win32':
             import psutil
             import win32gui
             import win32process
@@ -33,6 +33,7 @@ def window():
     temp_quest_time = ""
     running = False
     counter_lock = threading.Lock()
+    quest_list = []
 
     #App Info
     window = ctk.CTk()
@@ -45,7 +46,7 @@ def window():
         if sys.platform == 'darwin':
             appName = AppKit.NSWorkspace.sharedWorkspace().activeApplication()['NSApplicationName']
             
-        elif sys.platform == 'win32': #check if correct for win
+        elif sys.platform == 'win32':
             foregroundApp = win32gui.GetForegroundWindow()
             appTitle = win32gui.GetWindowText(foregroundApp)
             appName = appTitle.split(" - ")[-1]
@@ -167,6 +168,8 @@ def window():
             with open("quest_log.txt", "r") as log:
                 for line in log:
                     quest_list_TB.insert("0.0", f'{line.strip()}\n')
+                    quest_name = line.split(" : ")[0]
+                    quest_list.append(quest_name)
         except FileNotFoundError:
             pass
 
@@ -176,25 +179,32 @@ def window():
         while running:
             with counter_lock:
                 app_name = get_active_app_name()
-                if app_name in app_dict:
-                    new_app = False
-                    app_index = list(app_dict.keys()).index(app_name) +1
-                    app_dict[app_name] += sleep_time
+                if quest_list:
+                    if app_name in quest_list:
+                        if app_name in app_dict:
+                            new_app = False
+                            app_index = list(app_dict.keys()).index(app_name) +1
+                            app_dict[app_name] += sleep_time
+                        else:
+                            new_app = True
+                            app_dict[app_name] = sleep_time
+                    else:
+                        pass
+                    sleep(sleep_time)
                 else:
-                    new_app = True
-                    app_dict[app_name] = sleep_time
-
-            sleep(sleep_time)
+                    pass
 
     def update_loop(): #this is the while true loop
         global app_name, app_dict, app_index, new_app
         
         try:
-            if new_app:
-                app_list_TB.insert(f"end", f'{list(app_dict.keys())[-1]}: {app_dict[app_name]} seconds\n')
-            else:
-                app_list_TB.delete(f"{app_index}.0", f"{app_index}.end")
-                app_list_TB.insert(f"{app_index}.0", f'{list(app_dict.keys())[app_index -1]}: {app_dict[app_name]} seconds')
+            if app_name in quest_list:
+                if new_app:
+                    app_list_TB.insert(f"end", f'{app_name}: {app_dict[app_name]} seconds\n')
+                    new_app = False
+                else:
+                    app_list_TB.delete(f"{app_index}.0", f"{app_index}.end")
+                    app_list_TB.insert(f"{app_index}.0", f'{app_name}: {app_dict[app_name]} seconds')
         except:
             pass
 
@@ -219,7 +229,7 @@ def window():
     time = [">1 hour", ">2 hours", '>3 hours']
     temp_quest_time = time[0]
     app_list = get_all_app_list()
-    tab_list = ["Any Tab", "Youtube", "Reddit", "Instagram", "Facebook"]
+    tab_list = ["Youtube", "Reddit", "Instagram", "Facebook"]
     temp_quest_app = app_list[0]
     
     #App Option
