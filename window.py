@@ -6,6 +6,7 @@ def window():
         import customtkinter as ctk
         import threading
         from time import sleep
+        import sqlite3
 
         if sys.platform == 'darwin':
             import AppKit
@@ -18,13 +19,34 @@ def window():
     except ModuleNotFoundError as e:
         import tkinter
         tkinter.messagebox.showerror("Missing Libraries", str(e))
-        
 
     #DEBUG
     DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
     
-    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, update_tick, running
+    #SQLite Setup
+    conn = sqlite3.connect('sproutime.db')
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS quest (
+                id INTEGER PRIMARY KEY,
+                app_name TEXT NOT NULL,
+                time INTEGER NOT NULL,
+                maximum INTEGER NOT NULL
+            )
+        ''')
+        
+        if DEBUG:
+            cursor.execute(f"DELETE FROM quest")
+            conn.commit()
+        
+    except sqlite3.Error as e:
+        if DEBUG: print(f"An error occurred: {e}")
+        conn.rollback()
 
+    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, update_tick, running, maximum_map, time_map
+    
     app_dict = {}
     update_tick = 1 if DEBUG else 60
     new_app = False
@@ -128,50 +150,59 @@ def window():
             pass
         else:
             temp_quest_app = choice
+   
+    def refresh_app_list():
+        global app_list
+        app_list = get_all_app_list()
+        
+        app_dropdown.configure(values=app_list)
             
     def save_quest_time():
         global temp_quest_app, temp_quest_time
+        
+        #Pending changes from UI time drop-box update
+        maximum_map = {'>':1, '<':0}
+        time_map = {'1 hour':60, '2 hours':120, '3 hours':180}
+        maximum = maximum_map.get(list(temp_quest_time)[0])
+        time = time_map.get(temp_quest_time[1:])
+        
         try:
-            with open("quest_log.txt", 'r') as log:
-                lines = log.readlines()
-        except FileNotFoundError:
-            with open("quest_log.txt", "a") as log:
-                log.write(f"{temp_quest_app} : {temp_quest_time}\n")
-            update_quest_list()
-            return
-
-        updated_lines = []
-        found = False
-        for line in lines:
-            if line.startswith(temp_quest_app):
-                parts = line.split(':', 1)
-                if len(parts) == 2:
-                    updated_line = f"{temp_quest_app} : {temp_quest_time}\n"
-                    updated_lines.append(updated_line)
-                    found = True
-                else:
-                    updated_lines.append(line)
+            cursor.execute("SELECT COUNT(*) FROM quest WHERE app_name = ?", (temp_quest_app,)) #Check for duplicate
+            result = cursor.fetchone()
+            
+            if result and result[0] > 0:
+                cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (time, maximum, temp_quest_app))
             else:
-                updated_lines.append(line)
+                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (temp_quest_app, time, maximum))
+            conn.commit()
 
-        if found:
-            with open("quest_log.txt", 'w') as log:
-                log.writelines(updated_lines)
-        else:
-            with open("quest_log.txt", "a") as log:
-                log.write(f"{temp_quest_app} : {temp_quest_time}\n")
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        
         update_quest_list()
 
     def update_quest_list():
         try:
+            cursor.execute("SELECT app_name, maximum, time FROM quest")
+            quests = cursor.fetchall()
+            
             quest_list_TB.delete("0.0", "end")
-            with open("quest_log.txt", "r") as log:
-                for line in log:
-                    quest_list_TB.insert("0.0", f'{line.strip()}\n')
-                    quest_name = line.split(" : ")[0]
-                    quest_list.append(quest_name)
-        except FileNotFoundError:
-            pass
+            for quest in quests:
+                maximum = ">" if quest[1] == 1 else "<"
+                time = quest[2] / 60
+
+                quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{time} hour\n')
+                
+                quest_list.append(quest[0])
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+
+    def delete_quest():
+        global temp_quest_app
+        cursor.execute("DELETE FROM quest WHERE app_name = ?", (temp_quest_app,))
+        update_quest_list()
 
     def update_time():
         global app_name, app_dict, app_index, new_app, running
@@ -217,6 +248,8 @@ def window():
         
         p1.join()
         
+        conn.close()
+        
         print("Window is closing!") #temp code
         sys.exit()
 
@@ -233,21 +266,29 @@ def window():
     temp_quest_app = app_list[0]
     
     #App Option
-    combobox = ctk.CTkComboBox(master=window,values=app_list, command=combobox_callback)
-    combobox.grid(row=1, column=0, padx=20, pady=10, sticky='w')
+    app_dropdown = ctk.CTkComboBox(master=window,values=app_list, command=combobox_callback)
+    app_dropdown.grid(row=1, column=0, padx=20, pady=10, sticky='w')
 
     #Time Option
-    timebox = ctk.CTkComboBox(master=window,values=time, command=timebox_callback)
-    timebox.grid(row=1, column=1, padx=20, pady=10, sticky='e')
+    time_dropdown = ctk.CTkComboBox(master=window,values=time, command=timebox_callback)
+    time_dropdown.grid(row=1, column=2, padx=20, pady=10, sticky='e')
 
     #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
     tabBox = ctk.CTkComboBox(master=window, values=tab_list, command=tabBox_callback)
     def show_tabBox():
         tabBox.grid(row=1, column=1, padx=20, pady=10)
+        
+    #Refresh Button
+    refresh_button = ctk.CTkButton(master=window, text="Refresh", command=refresh_app_list)
+    refresh_button.grid(row=2, column=0, padx=20, pady=10, sticky='e')
+    
+    #Delete Button
+    delete_button = ctk.CTkButton(master=window, text="Delete", command=delete_quest)
+    delete_button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
 
-    #Button
-    button = ctk.CTkButton(master=window, text="Save", command=save_quest_time)
-    button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
+    #Save Button
+    save_button = ctk.CTkButton(master=window, text="Save", command=save_quest_time)
+    save_button.grid(row=2, column=2, padx=20, pady=10, sticky='e')
 
     #Quest Saved Textbox
     quest_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
