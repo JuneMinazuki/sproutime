@@ -23,8 +23,6 @@ def window():
     #DEBUG
     DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
     
-    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, update_tick, running
-    
     #SQLite Setup
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
@@ -42,14 +40,13 @@ def window():
         if DEBUG:
             cursor.execute(f"DELETE FROM quest")
             conn.commit()
-            
-            with open("quest_log.txt", "w") as log:
-                log.write("")
         
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
 
+    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, update_tick, running, maximum_map, time_map
+    
     app_dict = {}
     update_tick = 1 if DEBUG else 60
     new_app = False
@@ -153,6 +150,12 @@ def window():
             pass
         else:
             temp_quest_app = choice
+   
+    def refresh_app_list():
+        global app_list
+        app_list = get_all_app_list()
+        
+        app_dropdown.configure(values=app_list)
             
     def save_quest_time():
         global temp_quest_app, temp_quest_time
@@ -161,60 +164,40 @@ def window():
         maximum_map = {'>':1, '<':0}
         time_map = {'1 hour':60, '2 hours':120, '3 hours':180}
         maximum = maximum_map.get(list(temp_quest_time)[0])
-        temp_quest_time = time_map.get(temp_quest_time[1:])
+        time = time_map.get(temp_quest_time[1:])
         
         try:
-            cursor.execute("SELECT COUNT(*) FROM quest WHERE app_name = ?", (temp_quest_app)) #Check for duplicate
+            cursor.execute("SELECT COUNT(*) FROM quest WHERE app_name = ?", (temp_quest_app,)) #Check for duplicate
             result = cursor.fetchone()
             
             if result and result[0] > 0:
-                cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE name = ?", (temp_quest_time, maximum, temp_quest_app))
+                cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (time, maximum, temp_quest_app))
             else:
-                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (temp_quest_app, temp_quest_time, maximum))
+                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (temp_quest_app, time, maximum))
             conn.commit()
 
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
             conn.rollback()
-
-        updated_lines = []
-        found = False
-        for line in lines:
-            if line.startswith(temp_quest_app):
-                parts = line.split(':', 1)
-                if len(parts) == 2:
-                    updated_line = f"{temp_quest_app} : {temp_quest_time}\n"
-                    updated_lines.append(updated_line)
-                    found = True
-                else:
-                    updated_lines.append(line)
-            else:
-                updated_lines.append(line)
-
-        if found:
-            with open("quest_log.txt", 'w') as log:
-                log.writelines(updated_lines)
-        else:
-            with open("quest_log.txt", "a") as log:
-                log.write(f"{temp_quest_app} : {temp_quest_time}\n")
-        update_quest_list()
-
-    def refresh_app_list():
-        global app_list
-        app_list = get_all_app_list()
         
-        app_dropdown.configure(values=app_list)
+        update_quest_list()
 
     def update_quest_list():
         try:
+            cursor.execute("SELECT app_name, maximum, time FROM quest")
+            quests = cursor.fetchall()
+            
             quest_list_TB.delete("0.0", "end")
-            with open("quest_log.txt", "r") as log:
-                for line in log:
-                    quest_list_TB.insert("0.0", f'{line.strip()}\n')
-                    quest_name = line.split(" : ")[0]
-                    quest_list.append(quest_name)
-        except FileNotFoundError:
-            pass
+            for quest in quests:
+                maximum = ">" if quest[1] == 1 else "<"
+                time = quest[2] / 60
+                print(quest)
+                quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{time} hour\n')
+                
+                quest_list.append(quest[0])
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
 
     def update_time():
         global app_name, app_dict, app_index, new_app, running
