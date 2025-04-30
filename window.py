@@ -15,6 +15,7 @@ def window():
             import win32gui
             import win32process
             import pywinauto.application
+            import winotify
 
     except ModuleNotFoundError as e:
         import tkinter
@@ -45,7 +46,7 @@ def window():
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
 
-    global temp_quest_app, temp_quest_time, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update
+    global temp_quest_app, temp_quest_time, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points
     
     app_dict = {}
     update_tick = 1 if DEBUG else 60
@@ -58,6 +59,7 @@ def window():
     quest_dict = {}
     quest_complete_update = False
     completed_list = []
+    total_points = 0    # Right now +100 per completed quest
 
     #App Info
     window = ctk.CTk()
@@ -205,6 +207,23 @@ def window():
         conn.commit()
         update_quest_list()
 
+    def quest_done_noti(app_name):
+        if sys.platform == 'darwin':
+            pass
+            
+        elif sys.platform == 'win32':
+            Title = f"Quest Completed for {app_name}"
+            Msg = f"Well done! You've spent enough time on {app_name}"
+
+            noti = winotify.Notification(app_id="Sproutime",
+                          title = Title,
+                          msg = Msg,
+                          duration = "long")
+            
+            noti.set_audio(winotify.audio.Default, loop=False)
+
+            noti.show()
+
     def update_time():
         global app_name, app_dict, app_time_update, running, quest_complete_update
         
@@ -218,7 +237,7 @@ def window():
                                 if quest_dict[app_name]["time"] > app_dict[app_name]:
                                     new_app = False
                                     app_index = list(app_dict.keys()).index(app_name) +1
-                                    app_dict[app_name] += 1
+                                    app_dict[app_name] += 1200
                                 else:
                                     quest_complete_update = True
                                     completed_list.append(app_name)
@@ -240,7 +259,7 @@ def window():
                     pass
 
     def ui_update(): #this is the while true loop
-        global app_dict, app_time_update, quest_complete_update
+        global app_dict, app_time_update, quest_complete_update, total_points
         
         if app_time_update:
             app_list_TB.delete("0.0", "end")
@@ -250,7 +269,9 @@ def window():
             app_time_update = False
 
         if quest_complete_update:
-            completed_list_TB.insert("end", f'{completed_list[-1]} {quest_dict[completed_list[-1]]["maximum"]} {quest_dict[completed_list[-1]]["time"] / 60 / 60} hour(s): Completed\n')
+            completed_list_TB.insert("end", f'{completed_list[-1]} {quest_dict[completed_list[-1]]["maximum"]} {quest_dict[completed_list[-1]]["time"] / 60 / 60} hour(s): Completed +100 points\n')
+            quest_done_noti(completed_list[-1])
+            total_points += 100
             quest_complete_update = False
 
         window.after(update_tick*1000, ui_update)
