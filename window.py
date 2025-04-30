@@ -37,19 +37,19 @@ def window():
             )
         ''')
         
-        if DEBUG:
-            cursor.execute(f"DELETE FROM quest")
-            conn.commit()
+        #if DEBUG:
+            #cursor.execute(f"DELETE FROM quest")
+            #conn.commit()
         
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
 
-    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, update_tick, running, maximum_map, time_map
+    global temp_quest_app, temp_quest_time, app_dict, app_time_update, app_index, update_tick, running, maximum_map, time_map
     
     app_dict = {}
     update_tick = 1 if DEBUG else 60
-    new_app = False
+    app_time_update = False
     app_index = 0
     temp_quest_app = ""
     temp_quest_time = ""
@@ -205,7 +205,7 @@ def window():
         update_quest_list()
 
     def update_time():
-        global app_name, app_dict, app_index, new_app, running
+        global app_name, app_dict, app_index, app_time_update, running
         
         while running:
             with counter_lock:
@@ -213,33 +213,29 @@ def window():
                 if quest_list:
                     if app_name in quest_list:
                         if app_name in app_dict:
-                            new_app = False
                             app_index = list(app_dict.keys()).index(app_name) +1
                             app_dict[app_name] += 1
                         else:
-                            new_app = True
                             app_dict[app_name] = 1
                     else:
                         pass
+                    
+                    app_time_update = True
                     sleep(1)
                 else:
                     pass
 
-    def update_loop(): #this is the while true loop
-        global app_name, app_dict, app_index, new_app
+    def ui_update(): #this is the while true loop
+        global app_name, app_dict, app_index, app_time_update
         
-        try:
-            if app_name in quest_list:
-                if new_app:
-                    app_list_TB.insert(f"end", f'{app_name}: {app_dict[app_name]} seconds\n')
-                    new_app = False
-                else:
-                    app_list_TB.delete(f"{app_index}.0", f"{app_index}.end")
-                    app_list_TB.insert(f"{app_index}.0", f'{app_name}: {app_dict[app_name]} seconds')
-        except:
-            pass
+        if app_time_update:
+            app_list_TB.delete("0.0", "end")
+            for app in app_dict:
+                app_list_TB.insert("end", f'{app}: {app_dict[app]} seconds\n')
+            
+            app_time_update = False
 
-        window.after(update_tick*1000, update_loop)
+        window.after(update_tick*1000, ui_update)
         
     def on_closing(): #when user close the program
         global running
@@ -299,7 +295,7 @@ def window():
     p1 = threading.Thread(target=update_time)
     
     p1.start()                      
-    update_loop()
+    ui_update()
 
     window.protocol("WM_DELETE_WINDOW", on_closing) #check for if user close the program
 
