@@ -201,6 +201,7 @@ def window():
     def delete_quest():
         global temp_quest_app
         cursor.execute("DELETE FROM quest WHERE app_name = ?", (temp_quest_app,))
+        conn.commit()
         update_quest_list()
 
     def update_time():
