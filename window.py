@@ -45,12 +45,11 @@ def window():
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
 
-    global temp_quest_app, temp_quest_time, app_dict, app_time_update, app_index, update_tick, running, maximum_map, time_map
+    global temp_quest_app, temp_quest_time, app_dict, app_time_update, update_tick, running, maximum_map, time_map
     
     app_dict = {}
     update_tick = 1 if DEBUG else 60
     app_time_update = False
-    app_index = 0
     temp_quest_app = ""
     temp_quest_time = ""
     running = False
@@ -205,7 +204,7 @@ def window():
         update_quest_list()
 
     def update_time():
-        global app_name, app_dict, app_index, app_time_update, running
+        global app_name, app_dict, app_time_update, running
         
         while running:
             with counter_lock:
@@ -213,7 +212,6 @@ def window():
                 if quest_list:
                     if app_name in quest_list:
                         if app_name in app_dict:
-                            app_index = list(app_dict.keys()).index(app_name) +1
                             app_dict[app_name] += 1
                         else:
                             app_dict[app_name] = 1
@@ -226,7 +224,7 @@ def window():
                     pass
 
     def ui_update(): #this is the while true loop
-        global app_name, app_dict, app_index, app_time_update
+        global app_dict, app_time_update
         
         if app_time_update:
             app_list_TB.delete("0.0", "end")
