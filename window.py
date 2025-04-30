@@ -45,7 +45,7 @@ def window():
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
 
-    global temp_quest_app, temp_quest_time, app_dict, app_time_update, update_tick, running, maximum_map, time_map
+    global temp_quest_app, temp_quest_time, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update
     
     app_dict = {}
     update_tick = 1 if DEBUG else 60
@@ -55,6 +55,9 @@ def window():
     running = False
     counter_lock = threading.Lock()
     quest_list = []
+    quest_dict = {}
+    quest_complete_update = False
+    completed_list = []
 
     #App Info
     window = ctk.CTk()
@@ -92,7 +95,6 @@ def window():
                         app_list.append(app.localizedName())
                         
             elif sys.platform == 'win32':
-                PID_list = []
                 for process in psutil.process_iter(['pid', 'name']): # Loops through all running processes 
                     pid = process.info['pid']
                     ignored_processes = ["", "Windows Input Experience", "Program Manager"]
@@ -105,7 +107,6 @@ def window():
                             app_name = window_title.split(" - ")[-1]
                             if app_name not in app_list and app_name not in ignored_processes: 
                                 app_list.append(app_name)
-                                PID_list.append(pid) # I think this will be needed later when we implement the user task setup
 
                     win32gui.EnumWindows(enumWindowsArguments, None) # Enumerate all top-level windows
 
@@ -145,10 +146,7 @@ def window():
 
     def tabBox_callback(choice):
         global temp_quest_app
-        if choice == "Any Tab": # For now "Any Tab" will just detect Chrome in General
-            pass
-        else:
-            temp_quest_app = choice
+        temp_quest_app = choice
    
     def refresh_app_list():
         global app_list
@@ -187,6 +185,8 @@ def window():
             quests = cursor.fetchall()
             
             quest_list_TB.delete("0.0", "end")
+            quest_dict.clear()
+            quest_list.clear()
             for quest in quests:
                 maximum = ">" if quest[1] == 1 else "<"
                 time = quest[2] / 60
@@ -194,6 +194,7 @@ def window():
                 quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{time} hour\n')
                 
                 quest_list.append(quest[0])
+                quest_dict[quest[0]] = {"maximum": maximum, "time": quest[2] * 60}
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
             conn.rollback()
@@ -205,15 +206,29 @@ def window():
         update_quest_list()
 
     def update_time():
-        global app_name, app_dict, app_time_update, running
+        global app_name, app_dict, app_time_update, running, quest_complete_update
         
         while running:
             with counter_lock:
                 app_name = get_active_app_name()
                 if quest_list:
-                    if app_name in quest_list:
+                    if app_name in quest_list and app_name not in completed_list:
                         if app_name in app_dict:
-                            app_dict[app_name] += 1
+                            if quest_dict[app_name]["maximum"] == ">":
+                                if quest_dict[app_name]["time"] > app_dict[app_name]:
+                                    new_app = False
+                                    app_index = list(app_dict.keys()).index(app_name) +1
+                                    app_dict[app_name] += 1
+                                else:
+                                    quest_complete_update = True
+                                    completed_list.append(app_name)
+                            else:
+                                if quest_dict[app_name]["time"] < app_dict[app_name]:
+                                    new_app = False
+                                    app_index = list(app_dict.keys()).index(app_name) +1
+                                    app_dict[app_name] += 1
+                                else:
+                                    pass
                         else:
                             app_dict[app_name] = 1
                     else:
@@ -225,7 +240,7 @@ def window():
                     pass
 
     def ui_update(): #this is the while true loop
-        global app_dict, app_time_update
+        global app_dict, app_time_update, quest_complete_update
         
         if app_time_update:
             app_list_TB.delete("0.0", "end")
@@ -233,6 +248,10 @@ def window():
                 app_list_TB.insert("end", f'{app}: {app_dict[app]} seconds\n')
             
             app_time_update = False
+
+        if quest_complete_update:
+            completed_list_TB.insert("end", f'{completed_list[-1]} {quest_dict[completed_list[-1]]["maximum"]} {quest_dict[completed_list[-1]]["time"] / 60 / 60} hour(s): Completed\n')
+            quest_complete_update = False
 
         window.after(update_tick*1000, ui_update)
         
@@ -251,7 +270,7 @@ def window():
     running = True
     
     #Textbox
-    app_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
+    app_list_TB = ctk.CTkTextbox(window, width=1080, height=180)
     app_list_TB.grid(row=0, column=0, columnspan = 2)
 
     time = [">1 hour", ">2 hours", '>3 hours']
@@ -286,9 +305,13 @@ def window():
     save_button.grid(row=2, column=2, padx=20, pady=10, sticky='e')
 
     #Quest Saved Textbox
-    quest_list_TB = ctk.CTkTextbox(window, width=1080, height=360)
+    quest_list_TB = ctk.CTkTextbox(window, width=1080, height=180)
     quest_list_TB.grid(row=3, column=0, columnspan = 2)
     update_quest_list()
+
+    #Completed Quests Textbox
+    completed_list_TB = ctk.CTkTextbox(window, width=1080, height=180)
+    completed_list_TB.grid(row=4, column=0, columnspan=2)
     
     #First load
     p1 = threading.Thread(target=update_time)
