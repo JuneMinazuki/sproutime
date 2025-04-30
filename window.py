@@ -45,7 +45,7 @@ def window():
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
 
-    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, update_tick, running, maximum_map, time_map
+    global temp_quest_app, temp_quest_time, app_dict, new_app, app_index, update_tick, running, maximum_map, time_map, quest_dict, quest_completed
     
     app_dict = {}
     update_tick = 1 if DEBUG else 60
@@ -56,6 +56,9 @@ def window():
     running = False
     counter_lock = threading.Lock()
     quest_list = []
+    quest_dict = {}
+    quest_completed = False
+    completed_list = []
 
     #App Info
     window = ctk.CTk()
@@ -183,6 +186,8 @@ def window():
             quests = cursor.fetchall()
             
             quest_list_TB.delete("0.0", "end")
+            quest_dict.clear()
+            quest_list.clear()
             for quest in quests:
                 maximum = ">" if quest[1] == 1 else "<"
                 time = quest[2] / 60
@@ -190,6 +195,7 @@ def window():
                 quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{time} hour\n')
                 
                 quest_list.append(quest[0])
+                quest_dict[quest[0]] = {"maximum": maximum, "time": quest[2] * 60}
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
             conn.rollback()
@@ -200,17 +206,28 @@ def window():
         update_quest_list()
 
     def update_time():
-        global app_name, app_dict, app_index, new_app, running
+        global app_name, app_dict, app_index, new_app, running, quest_completed
         
         while running:
             with counter_lock:
                 app_name = get_active_app_name()
                 if quest_list:
-                    if app_name in quest_list:
+                    if app_name in quest_list and app_name not in completed_list:
                         if app_name in app_dict:
-                            new_app = False
-                            app_index = list(app_dict.keys()).index(app_name) +1
-                            app_dict[app_name] += 1
+                            if quest_dict[app_name]["maximum"] == ">":
+                                if quest_dict[app_name]["time"] > app_dict[app_name]:
+                                    new_app = False
+                                    app_index = list(app_dict.keys()).index(app_name) +1
+                                    app_dict[app_name] += 1
+                                else:
+                                    quest_completed = True
+                            else:
+                                if quest_dict[app_name]["time"] < app_dict[app_name]:
+                                    new_app = False
+                                    app_index = list(app_dict.keys()).index(app_name) +1
+                                    app_dict[app_name] += 1
+                                else:
+                                    pass
                         else:
                             new_app = True
                             app_dict[app_name] = 1
