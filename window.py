@@ -48,19 +48,24 @@ def window():
 
     global temp_quest_app, temp_quest_time, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points
     
-    app_dict = {}
+    #Thread Setup
+    running = False
+    time_lock = threading.Lock()
+    
+    #Global Var
     update_tick = 1 if DEBUG else 60
-    app_time_update = False
+    app_dict = {}
     temp_quest_app = ""
     temp_quest_time = ""
-    running = False
-    counter_lock = threading.Lock()
     quest_list = []
     quest_dict = {}
     quest_complete_update = False
     completed_list = []
     total_points = 0    # Right now +100 per completed quest
 
+    #GUI Update Request
+    app_time_update = False
+    
     #App Info
     window = ctk.CTk()
     window.geometry("1080x720")
@@ -228,23 +233,19 @@ def window():
         global app_name, app_dict, app_time_update, running, quest_complete_update
         
         while running:
-            with counter_lock:
+            with time_lock:
                 app_name = get_active_app_name()
                 if quest_list:
                     if app_name in quest_list and app_name not in completed_list:
                         if app_name in app_dict:
                             if quest_dict[app_name]["maximum"] == ">":
                                 if quest_dict[app_name]["time"] > app_dict[app_name]:
-                                    new_app = False
-                                    app_index = list(app_dict.keys()).index(app_name) +1
                                     app_dict[app_name] += 1
                                 else:
                                     quest_complete_update = True
                                     completed_list.append(app_name)
                             else:
                                 if quest_dict[app_name]["time"] < app_dict[app_name]:
-                                    new_app = False
-                                    app_index = list(app_dict.keys()).index(app_name) +1
                                     app_dict[app_name] += 1
                                 else:
                                     pass
