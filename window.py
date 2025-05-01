@@ -44,7 +44,9 @@ try:
 except sqlite3.Error as e:
     if DEBUG: print(f"An error occurred: {e}")
     conn.rollback()
-    
+
+global temp_quest_app, temp_quest_time, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points
+
 app_dict = {}
 update_tick = 1 if DEBUG else 60
 app_time_update = False
@@ -271,17 +273,17 @@ def ui_update(): #this is the while true loop
         total_points += 100
         quest_complete_update = False
 
-window.after(update_tick*1000, ui_update)
-
+    window.after(update_tick*1000, ui_update)
+    
 def on_closing(): #when user close the program
     global running
-
+    
     running = False
-
+    
     p1.join()
-
+    
     conn.close()
-
+    
     print("Window is closing!") #temp code
     sys.exit()
 
@@ -309,7 +311,7 @@ time_dropdown.grid(row=1, column=2, padx=20, pady=10, sticky='e')
 tabBox = ctk.CTkComboBox(master=window, values=tab_list, command=tabBox_callback)
 def show_tabBox():
     tabBox.grid(row=1, column=1, padx=20, pady=10)
-
+    
 #Refresh Button
 refresh_button = ctk.CTkButton(master=window, text="Refresh", command=refresh_app_list)
 refresh_button.grid(row=2, column=0, padx=20, pady=10, sticky='e')
