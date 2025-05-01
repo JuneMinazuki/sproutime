@@ -237,7 +237,7 @@ def window():
                                 if quest_dict[app_name]["time"] > app_dict[app_name]:
                                     new_app = False
                                     app_index = list(app_dict.keys()).index(app_name) +1
-                                    app_dict[app_name] += 1200
+                                    app_dict[app_name] += 1
                                 else:
                                     quest_complete_update = True
                                     completed_list.append(app_name)
