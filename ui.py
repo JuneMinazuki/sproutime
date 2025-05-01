@@ -41,6 +41,11 @@ def setup_tab1(tab, tabview):
     )
     button_tab1.pack(padx=20, pady=20)
 
+    # Add a close button with sys.exit()
+    button_close = customtkinter.CTkButton(tab, text="Close", command=sys.exit)
+    button_close.pack(padx=20, pady=20)
+    
+
 
 
 def setup_tab2(tab, tabview):
