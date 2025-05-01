@@ -14,6 +14,7 @@ try:
         import win32gui
         import win32process
         import pywinauto.application
+        import winotify
 
 except ModuleNotFoundError as e:
     import tkinter
@@ -43,9 +44,7 @@ try:
 except sqlite3.Error as e:
     if DEBUG: print(f"An error occurred: {e}")
     conn.rollback()
-
-global temp_quest_app, temp_quest_time, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update
-
+    
 app_dict = {}
 update_tick = 1 if DEBUG else 60
 app_time_update = False
@@ -57,6 +56,7 @@ quest_list = []
 quest_dict = {}
 quest_complete_update = False
 completed_list = []
+total_points = 0    # Right now +100 per completed quest
 
 #App Info
 window = ctk.CTk()
@@ -204,6 +204,23 @@ def delete_quest():
     conn.commit()
     update_quest_list()
 
+def quest_done_noti(app_name):
+    if sys.platform == 'darwin':
+        pass
+        
+    elif sys.platform == 'win32':
+        Title = f"Quest Completed for {app_name}"
+        Msg = f"Well done! You've spent enough time on {app_name}"
+
+        noti = winotify.Notification(app_id="Sproutime",
+                        title = Title,
+                        msg = Msg,
+                        duration = "long")
+        
+        noti.set_audio(winotify.audio.Default, loop=False)
+
+        noti.show()
+
 def update_time():
     global app_name, app_dict, app_time_update, running, quest_complete_update
     
@@ -239,7 +256,7 @@ def update_time():
                 pass
 
 def ui_update(): #this is the while true loop
-    global app_dict, app_time_update, quest_complete_update
+    global app_dict, app_time_update, quest_complete_update, total_points
     
     if app_time_update:
         app_list_TB.delete("0.0", "end")
@@ -249,20 +266,22 @@ def ui_update(): #this is the while true loop
         app_time_update = False
 
     if quest_complete_update:
-        completed_list_TB.insert("end", f'{completed_list[-1]} {quest_dict[completed_list[-1]]["maximum"]} {quest_dict[completed_list[-1]]["time"] / 60 / 60} hour(s): Completed\n')
+        completed_list_TB.insert("end", f'{completed_list[-1]} {quest_dict[completed_list[-1]]["maximum"]} {quest_dict[completed_list[-1]]["time"] / 60 / 60} hour(s): Completed +100 points\n')
+        quest_done_noti(completed_list[-1])
+        total_points += 100
         quest_complete_update = False
 
-    window.after(update_tick*1000, ui_update)
-    
+window.after(update_tick*1000, ui_update)
+
 def on_closing(): #when user close the program
     global running
-    
+
     running = False
-    
+
     p1.join()
-    
+
     conn.close()
-    
+
     print("Window is closing!") #temp code
     sys.exit()
 
@@ -290,7 +309,7 @@ time_dropdown.grid(row=1, column=2, padx=20, pady=10, sticky='e')
 tabBox = ctk.CTkComboBox(master=window, values=tab_list, command=tabBox_callback)
 def show_tabBox():
     tabBox.grid(row=1, column=1, padx=20, pady=10)
-    
+
 #Refresh Button
 refresh_button = ctk.CTkButton(master=window, text="Refresh", command=refresh_app_list)
 refresh_button.grid(row=2, column=0, padx=20, pady=10, sticky='e')
