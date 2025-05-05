@@ -10,6 +10,7 @@ def window():
 
         if sys.platform == 'darwin':
             import AppKit
+            import ScriptingBridge
         elif sys.platform == 'win32':
             import psutil
             import win32gui
@@ -46,7 +47,7 @@ def window():
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
 
-    global temp_quest_app, temp_quest_time, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points
+    global temp_quest_app, temp_quest_time, temp_quest_tab, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points, tab_list
     
     #Thread Setup
     running = False
@@ -56,15 +57,17 @@ def window():
     update_tick = 1 if DEBUG else 60
     app_dict = {}
     temp_quest_app = ""
+    temp_quest_tab = ""
     temp_quest_time = ""
+    web_browser = ["Google Chrome"]
     quest_list = []
     quest_dict = {}
-    quest_complete_update = False
     completed_list = []
     total_points = 0    # Right now +100 per completed quest
 
     #GUI Update Request
     app_time_update = False
+    quest_complete_update = False
     
     #App Info
     window = ctk.CTk()
@@ -76,6 +79,13 @@ def window():
     def get_active_app_name():
         if sys.platform == 'darwin':
             appName = AppKit.NSWorkspace.sharedWorkspace().activeApplication()['NSApplicationName']
+            
+            if appName == "Google Chrome": 
+                tabName = get_active_tab_name()
+                if tabName == "URL not detected":
+                    pass
+                else:
+                    appName = tabName
             
         elif sys.platform == 'win32':
             foregroundApp = win32gui.GetForegroundWindow()
@@ -121,7 +131,25 @@ def window():
 
     def get_active_tab_name():
         if sys.platform == "darwin":
-            pass
+            chrome = ScriptingBridge.SBApplication.applicationWithBundleIdentifier_("com.google.Chrome")
+            if not chrome.windows():
+                return "URL not detected"
+    
+            window = chrome.windows()[0]  # Get the first window
+            url = window.activeTab().URL() # Get the active tab in the window
+            tab = url.split('/')[2]
+            
+            match tab:
+                case "www.youtube.com":
+                    tabName = "Youtube"
+                case "www.reddit.com":
+                    tabName = "Reddit"
+                case "www.instagram.com":
+                    tabName = "Instagram"
+                case "www.facebook.com":
+                    tabName = "Facebook"
+                case _:
+                    tabName = "Google Chrome"
 
         elif sys.platform == "win32":
             try:
@@ -152,8 +180,8 @@ def window():
         temp_quest_time = choice
 
     def tabBox_callback(choice):
-        global temp_quest_app
-        temp_quest_app = choice
+        global temp_quest_tab
+        temp_quest_tab = choice
    
     def refresh_app_list():
         global app_list
@@ -170,14 +198,19 @@ def window():
         maximum = maximum_map.get(list(temp_quest_time)[0])
         time = time_map.get(temp_quest_time[1:])
         
+        if temp_quest_app in web_browser and temp_quest_tab != "Any Tabs":
+            app_name = temp_quest_tab
+        else:
+            app_name = temp_quest_app
+        
         try:
-            cursor.execute("SELECT COUNT(*) FROM quest WHERE app_name = ?", (temp_quest_app,)) #Check for duplicate
+            cursor.execute("SELECT COUNT(*) FROM quest WHERE app_name = ?", (app_name,)) #Check for duplicate
             result = cursor.fetchone()
             
             if result and result[0] > 0:
-                cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (time, maximum, temp_quest_app))
+                cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (time, maximum, app_name))
             else:
-                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (temp_quest_app, time, maximum))
+                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (app_name, time, maximum))
             conn.commit()
 
         except sqlite3.Error as e:
@@ -230,7 +263,7 @@ def window():
             noti.show()
 
     def update_time():
-        global app_name, app_dict, app_time_update, running, quest_complete_update
+        global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, tab_list
         
         while running:
             with time_lock:
@@ -247,6 +280,8 @@ def window():
                             else:
                                 if quest_dict[app_name]["time"] < app_dict[app_name]:
                                     app_dict[app_name] += 1
+                                    if app_name in tab_list:
+                                        app_dict["Google Chrome"] += 1
                                 else:
                                     pass
                         else:
@@ -298,8 +333,9 @@ def window():
     time = [">1 hour", ">2 hours", '>3 hours']
     temp_quest_time = time[0]
     app_list = get_all_app_list()
-    tab_list = ["Youtube", "Reddit", "Instagram", "Facebook"]
+    tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook"]
     temp_quest_app = app_list[0]
+    temp_quest_tab = tab_list[0]
     
     #App Option
     app_dropdown = ctk.CTkComboBox(master=window,values=app_list, command=combobox_callback)
@@ -312,7 +348,11 @@ def window():
     #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
     tabBox = ctk.CTkComboBox(master=window, values=tab_list, command=tabBox_callback)
     def show_tabBox():
+        global temp_quest_tab
+        
         tabBox.grid(row=1, column=1, padx=20, pady=10)
+        tabBox.set("Any Tabs")
+        temp_quest_tab = tab_list[0]
         
     #Refresh Button
     refresh_button = ctk.CTkButton(master=window, text="Refresh", command=refresh_app_list)
