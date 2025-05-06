@@ -48,7 +48,14 @@ def window():
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
 
-    global temp_quest_app, temp_quest_time, temp_quest_tab, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points, tab_list, debug_menu
+    global time_speed, temp_quest_app, temp_quest_time, temp_quest_tab, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points, tab_list, debug_menu
+    
+    #App Info
+    window = ctk.CTk()
+    window.geometry("1080x720")
+    window.title("Sproutime")
+    window.columnconfigure(1, weight=1)
+    window.columnconfigure(1, weight=1)
     
     #Thread Setup
     running = False
@@ -56,6 +63,7 @@ def window():
     
     #Global Var
     update_tick = 1 if DEBUG else 60
+    time_speed = ctk.IntVar(value=1)  
     app_dict = {}
     temp_quest_app = ""
     temp_quest_tab = ""
@@ -70,13 +78,6 @@ def window():
     #GUI Update Request
     app_time_update = False
     quest_complete_update = False
-    
-    #App Info
-    window = ctk.CTk()
-    window.geometry("1080x720")
-    window.title("Sproutime")
-    window.columnconfigure(1, weight=1)
-    window.columnconfigure(1, weight=1)
 
     def get_active_app_name():
         if sys.platform == 'darwin':
@@ -398,18 +399,27 @@ def window():
     window.mainloop()
 
 class DebugMenu(ctk.CTkToplevel):
+    global time_speed
+    
     def __init__(self, parent):
         super().__init__(parent)
         self.geometry("200x150")
         self.title("Debug Menu")
         self.label = ctk.CTkLabel(self, text="This is a debug menu!")
-        self.label.pack(padx=20, pady=20)
+        self.label.grid(row=0, column=0)
+        
+        self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text="CTkCheckBox", command=self.time_speed_check,
+                                     variable=time_speed, onvalue=3600, offvalue=1)
+        self.time_speed_checkbox.grid(row=1, column=0)
 
         self.protocol("WM_DELETE_WINDOW", self.close_debug_menu) # Handle window closing
+        
+    def time_speed_check(self):
+        global time_speed
+        print("checkbox toggled, current value:", time_speed.get())
 
     def close_debug_menu(self):
         global debug_menu
-        
         debug_menu = None
         self.destroy() 
 
