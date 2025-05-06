@@ -1,3 +1,4 @@
+import customtkinter as ctk
 def window():   
     import sys
 
@@ -47,7 +48,7 @@ def window():
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
 
-    global temp_quest_app, temp_quest_time, temp_quest_tab, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points, tab_list
+    global temp_quest_app, temp_quest_time, temp_quest_tab, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points, tab_list, debug_menu
     
     #Thread Setup
     running = False
@@ -64,6 +65,7 @@ def window():
     quest_dict = {}
     completed_list = []
     total_points = 0    # Right now +100 per completed quest
+    debug_menu = None
 
     #GUI Update Request
     app_time_update = False
@@ -188,6 +190,14 @@ def window():
         app_list = get_all_app_list()
         
         app_dropdown.configure(values=app_list)
+    
+    def open_debug_menu():
+        global debug_menu
+        
+        if debug_menu is None or debug_menu.winfo_exists():
+            debug_menu = DebugMenu(window)  # Pass the main window as parent
+        else:
+            debug_menu.focus()
             
     def save_quest_time():
         global temp_quest_app, temp_quest_time
@@ -280,8 +290,6 @@ def window():
                             else:
                                 if quest_dict[app_name]["time"] < app_dict[app_name]:
                                     app_dict[app_name] += 1
-                                    if app_name in tab_list:
-                                        app_dict["Google Chrome"] += 1
                                 else:
                                     pass
                         else:
@@ -375,6 +383,10 @@ def window():
     completed_list_TB = ctk.CTkTextbox(window, width=1080, height=180)
     completed_list_TB.grid(row=4, column=0, columnspan=2)
     
+    #Debug Button
+    debug_button = ctk.CTkButton(master=window, text="Debug", command=open_debug_menu)
+    debug_button.grid(row=5, column=0, padx=20, pady=10, sticky='w')
+    
     #First load
     p1 = threading.Thread(target=update_time)
     
@@ -384,6 +396,22 @@ def window():
     window.protocol("WM_DELETE_WINDOW", on_closing) #check for if user close the program
 
     window.mainloop()
-    
+
+class DebugMenu(ctk.CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.geometry("200x150")
+        self.title("Debug Menu")
+        self.label = ctk.CTkLabel(self, text="This is a debug menu!")
+        self.label.pack(padx=20, pady=20)
+
+        self.protocol("WM_DELETE_WINDOW", self.close_debug_menu) # Handle window closing
+
+    def close_debug_menu(self):
+        global debug_menu
+        
+        debug_menu = None
+        self.destroy() 
+
 if __name__=="__main__":
     window()
