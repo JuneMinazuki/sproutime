@@ -35,18 +35,20 @@ class Tabview(ctk.CTkTabview):
     def __init__(self, master=None, **kwargs):
         super().__init__(master, command=self.tab_changed, **kwargs)
             
-        self.tab1_thread = None
-        self.tab2_thread = None
+        self.progress_thread = None
+        self.quest_thread = None
+        self.score_thread = None
+        self.stats_thread = None
 
-        self.create_tab1_widgets()
-        self.create_tab2_widgets()
-        self.create_tab3_widgets()
-        self.create_tab4_widgets()
-        self.create_tab5_widgets()
+        self.create_progress_widgets()
+        self.create_quest_widgets()
+        self.create_score_widgets()
+        self.create_stats_widgets()
+        self.create_setting_widgets()
 
         self.start_updating()
 
-    def create_tab1_widgets(self):
+    def create_progress_widgets(self):
         self.tab1 = self.add("Progress")
 
         #Textbox
@@ -59,7 +61,7 @@ class Tabview(ctk.CTkTabview):
         for row in range(5):
             self.tab1.rowconfigure(row, weight=1)
 
-    def create_tab2_widgets(self):
+    def create_quest_widgets(self):
         global quest_list_update
         self.tab2 = self.add("Quest")
 
@@ -94,7 +96,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_list_TB.grid(row=2, column=0, padx=10, pady=20, columnspan = 3)
         quest_list_update = True
 
-    def create_tab3_widgets(self):
+    def create_score_widgets(self):
         self.tab3 = self.add("Score")
 
         #Completed Quests Textbox
@@ -104,10 +106,10 @@ class Tabview(ctk.CTkTabview):
         for col in range(1):
             self.tab3.columnconfigure(col, weight=1)
         
-    def create_tab4_widgets(self):
+    def create_stats_widgets(self):
         self.tab4 = self.add("Stats")
 
-    def create_tab5_widgets(self):
+    def create_setting_widgets(self):
         self.tab5 = self.add("Settings")
         
         #Theme
@@ -119,8 +121,8 @@ class Tabview(ctk.CTkTabview):
         self.debug_button = ctk.CTkButton(master=self.tab5, text="Debug", command=self.open_debug_menu)
         self.debug_button.pack(padx=20, pady=10)
 
-    def update_tab1(self):
-        global app_dict, app_time_update, quest_complete_update, total_points, quest_list_update, task_score
+    def update_progress(self):
+        global running, app_time_update, app_dict, update_tick
         
         while running:
             if app_time_update:
@@ -129,29 +131,13 @@ class Tabview(ctk.CTkTabview):
                     self.app_list_TB.insert("end", f'{app}: {app_dict[app]} seconds\n')
                 
                 app_time_update = False
-
-            if quest_complete_update:
-                conn = sqlite3.connect('sproutime.db')
-                cursor = conn.cursor()
                 
-                try:
-                    cursor.execute("SELECT app_name, time, maximum, score_earn FROM quest_completion")
-                    quests = cursor.fetchall()
-                    
-                    self.completed_list_TB.delete("0.0", "end")
-                    for quest in quests:
-                        maximum = ">" if quest[2] == 1 else "<"
-                        
-                        self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
-                except sqlite3.Error as e:
-                    if DEBUG: print(f"An error occurred: {e}")
-                    conn.rollback()
-                finally:
-                    if conn:
-                        conn.close()
+            sleep(update_tick)
 
-                quest_complete_update = False
-                
+    def update_quest(self):
+        global running, quest_list_update, quest_dict, quest_list, update_tick
+        
+        while running:
             if quest_list_update:
                 conn = sqlite3.connect('sproutime.db')
                 cursor = conn.cursor()
@@ -179,15 +165,78 @@ class Tabview(ctk.CTkTabview):
                 quest_list_update = False
 
             sleep(update_tick)
+            
+    def update_score(self):
+        global running, quest_complete_update, update_tick
+        
+        while running:
+            if quest_complete_update:
+                conn = sqlite3.connect('sproutime.db')
+                cursor = conn.cursor()
+                
+                try:
+                    cursor.execute("SELECT app_name, time, maximum, score_earn FROM quest_completion")
+                    quests = cursor.fetchall()
+                    
+                    self.completed_list_TB.delete("0.0", "end")
+                    for quest in quests:
+                        maximum = ">" if quest[2] == 1 else "<"
+                        
+                        self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
+                except sqlite3.Error as e:
+                    if DEBUG: print(f"An error occurred: {e}")
+                    conn.rollback()
+                finally:
+                    if conn:
+                        conn.close()
 
+                quest_complete_update = False
+            sleep(update_tick)
+
+    def update_stats(self): 
+        global running, update_tick
+               
+        while running:
+            sleep(update_tick)
+            
     def start_updating(self):
         tab = self.get()
-        self.is_tab1_active = tab == "Progress"
-        self.is_tab2_active = tab == "Score"
+        self.progress_active = tab == "Progress"
+        self.quest_active = tab == "Quest"
+        self.score_active = tab == "Score"
+        self.stats_active = tab == "Stats"
 
-        if self.is_tab1_active and (self.tab1_thread is None or not self.tab1_thread.is_alive()):
-            self.tab1_thread = threading.Thread(target=self.update_tab1, daemon=True)
-            self.tab1_thread.start()
+        #Progess Tab
+        if self.progress_active and (self.progress_thread is None or not self.progress_thread.is_alive()):
+            self.progress_thread = threading.Thread(target=self.update_progress, daemon=True)
+            self.progress_thread.start()
+        elif not self.progress_active and self.progress_thread and self.progress_thread.is_alive():
+            # The thread will naturally pause in its while loop
+            pass
+        
+        #Quest Tab
+        if self.quest_active and (self.quest_thread is None or not self.quest_thread.is_alive()):
+            self.quest_thread = threading.Thread(target=self.update_quest, daemon=True)
+            self.quest_thread.start()
+        elif not self.progress_active and self.quest_thread and self.quest_thread.is_alive():
+            # The thread will naturally pause in its while loop
+            pass
+        
+        #Score Tab
+        if self.score_active and (self.score_thread is None or not self.score_thread.is_alive()):
+            self.score_thread = threading.Thread(target=self.update_score, daemon=True)
+            self.score_thread.start()
+        elif not self.score_active and self.score_thread and self.score_thread.is_alive():
+            # The thread will naturally pause in its while loop
+            pass
+        
+        #Stats Tab
+        if self.stats_active and (self.stats_thread is None or not self.stats_thread.is_alive()):
+            self.stats_thread = threading.Thread(target=self.update_progress, daemon=True)
+            self.stats_thread.start()
+        elif not self.stats_active and self.stats_thread and self.stats_thread.is_alive():
+            # The thread will naturally pause in its while loop
+            pass
 
     def tab_changed(self):
         self.start_updating()
