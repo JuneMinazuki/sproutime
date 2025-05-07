@@ -42,78 +42,82 @@ class Tabview(ctk.CTkTabview):
         self.create_tab2_widgets()
         self.create_tab3_widgets()
         self.create_tab4_widgets()
+        self.create_tab5_widgets()
 
         self.start_updating()
 
     def create_tab1_widgets(self):
-        global quest_list_update
-        
         self.tab1 = self.add("Progress")
 
         #Textbox
         self.app_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
         self.app_list_TB.grid(row=0, column=0, columnspan=4)
 
-        #App Option
-        self.app_dropdown = ctk.CTkComboBox(self.tab1,values=app_list, command=self.combobox_callback)
-        self.app_dropdown.grid(row=1, column=0,sticky='w')
-
-        #Time Option
-        self.time_dropdown = ctk.CTkComboBox(self.tab1,values=time, command=self.timebox_callback)
-        self.time_dropdown.grid(row=1, column=3,sticky='e')
-
-        #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
-        self.tabBox = ctk.CTkComboBox(self.tab1, values=tab_list, command=self.tabBox_callback)
-        self.tabBox.grid(row=1, column=2)
-        self.tabBox.set(tab_list[0])
-        self.tabBox.grid_remove()
-            
-        #Refresh Button
-        self.refresh_button = ctk.CTkButton(self.tab1, text="Refresh", command=self.refresh_app_list)
-        self.refresh_button.grid(row=2, column=0, sticky='w')
-        
-        #Delete Button
-        self.delete_button = ctk.CTkButton(self.tab1, text="Delete", command=self.delete_quest)
-        self.delete_button.grid(row=2, column=2)
-
-        #Save Button
-        self.save_button = ctk.CTkButton(self.tab1, text="Save", command=self.save_quest_time)
-        self.save_button.grid(row=2, column=3, sticky='e')
-
-        #Quest Saved Textbox
-        self.quest_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
-        self.quest_list_TB.grid(row=3, column=0, columnspan = 4)
-        quest_list_update = True
-
         for col in range(3):
             self.tab1.columnconfigure(col, weight=1)
 
         for row in range(5):
             self.tab1.rowconfigure(row, weight=1)
-            
-        #Debug Button
-        debug_button = ctk.CTkButton(master=self.tab1, text="Debug", command=self.open_debug_menu)
-        debug_button.grid(row=5, column=0, padx=20, pady=10, sticky='w')
 
     def create_tab2_widgets(self):
-        self.tab2 = self.add("Score")
+        global quest_list_update
+        self.tab2 = self.add("Quest")
+
+        #App Option
+        self.app_dropdown = ctk.CTkComboBox(self.tab2,values=app_list, command=self.combobox_callback)
+        self.app_dropdown.grid(row=0, column=0, padx=10, pady=20, sticky='w')
+
+        #Time Option
+        self.time_dropdown = ctk.CTkComboBox(self.tab2,values=time, command=self.timebox_callback)
+        self.time_dropdown.grid(row=0, column=2, padx=10, pady=20, sticky='e')
+
+        #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
+        self.tabBox = ctk.CTkComboBox(self.tab2, values=tab_list, command=self.tabBox_callback)
+        self.tabBox.grid(row=0, column=2)
+        self.tabBox.set(tab_list[0])
+        self.tabBox.grid_remove()
+            
+        #Refresh Button
+        self.refresh_button = ctk.CTkButton(self.tab2, text="Refresh", command=self.refresh_app_list)
+        self.refresh_button.grid(row=1, column=0, padx=10, pady=20, sticky='w')
+        
+        #Delete Button
+        self.delete_button = ctk.CTkButton(self.tab2, text="Delete", command=self.delete_quest)
+        self.delete_button.grid(row=1, column=1, padx=10, pady=20, sticky="e")
+
+        #Save Button
+        self.save_button = ctk.CTkButton(self.tab2, text="Save", command=self.save_quest_time)
+        self.save_button.grid(row=1, column=2, padx=10, pady=20, sticky='e')
+
+        #Quest Saved Textbox
+        self.quest_list_TB = ctk.CTkTextbox(self.tab2, width=1080, height=180)
+        self.quest_list_TB.grid(row=2, column=0, padx=10, pady=20, columnspan = 3)
+        quest_list_update = True
+
+    def create_tab3_widgets(self):
+        self.tab3 = self.add("Score")
 
         #Completed Quests Textbox
-        self.completed_list_TB = ctk.CTkTextbox(self.tab2, width=1080, height=180)
+        self.completed_list_TB = ctk.CTkTextbox(self.tab3, width=1080, height=180)
         self.completed_list_TB.grid(row=0, column=0, columnspan=3)
 
         for col in range(1):
-            self.tab2.columnconfigure(col, weight=1)
-
-    def create_tab3_widgets(self):
-        self.tab3 = self.add("Stats")
-
-
+            self.tab3.columnconfigure(col, weight=1)
+        
     def create_tab4_widgets(self):
-        self.tab4 = self.add("Settings")
-        theme_selector = ctk.CTkOptionMenu(master=self.tab4, values=theme_options, command=lambda theme: ctk.set_appearance_mode(theme))  # Change theme
-        theme_selector.pack(padx=20, pady=20)
-        theme_selector.set("System")  # Set default theme to "System"
+        self.tab4 = self.add("Stats")
+
+    def create_tab5_widgets(self):
+        self.tab5 = self.add("Settings")
+        
+        #Theme
+        self.theme_selector = ctk.CTkOptionMenu(master=self.tab5, values=theme_options, command=lambda theme: ctk.set_appearance_mode(theme))  # Change theme
+        self.theme_selector.pack(padx=20, pady=10)
+        self.theme_selector.set("System")  # Set default theme to "System"
+        
+        #Debug Button
+        self.debug_button = ctk.CTkButton(master=self.tab5, text="Debug", command=self.open_debug_menu)
+        self.debug_button.pack(padx=20, pady=10)
 
     def update_tab1(self):
         global app_dict, app_time_update, quest_complete_update, total_points, quest_list_update, task_score
