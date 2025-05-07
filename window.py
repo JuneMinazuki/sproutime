@@ -474,6 +474,27 @@ def quest_done_noti(app_name):
 
         noti.show()
 
+def load_past_data():
+    global app_time_update, app_dict
+    
+    conn = sqlite3.connect('sproutime.db')
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("SELECT app_name, duration FROM app_time WHERE date = ?", (str(date.today()),))
+        apps = cursor.fetchall()
+        
+        for app in apps:
+            app_dict[app[0]] = app[1]
+    except sqlite3.Error as e:
+        if DEBUG: print(f"An error occurred: {e}")
+        conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+            
+    app_time_update = True
+
 def update_time():
     global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, _d_time_speed, task_score
     
@@ -505,7 +526,7 @@ def update_time():
                         cursor.execute("SELECT quest_id FROM quest WHERE app_name = ?", (app_name,))
                         quest_id = cursor.fetchone()[0]
                         
-                        cursor.execute("INSERT INTO quest_completion (date, quest_id, score_earn) VALUES (?, ?, ?)", (date.today(), quest_id, task_score))
+                        cursor.execute("INSERT INTO quest_completion (date, quest_id, score_earn) VALUES (?, ?, ?)", (str(date.today()), quest_id, task_score))
                         conn.commit()
                     except sqlite3.Error as e:
                         if DEBUG: print(f"An error occurred: {e}")
@@ -533,7 +554,7 @@ def update_log(today):
         for app in app_dict:
             cursor.execute("SELECT COUNT(*) FROM app_time WHERE app_name = ? AND date = ?", (app, today))
             if cursor.fetchone()[0] > 0:
-                cursor.execute("UPDATE app_time SET duration = duration + ? WHERE app_name = ?", (app_dict[app], app))
+                cursor.execute("UPDATE app_time SET duration = ? WHERE app_name = ?", (app_dict[app], app))
             else:
                 cursor.execute("INSERT INTO app_time (app_name, date, duration) VALUES (?, ?, ?)", (app, today, app_dict[app]))
         conn.commit()
@@ -589,6 +610,7 @@ app_time_update = False
 quest_list_update = False
 quest_complete_update = False
 
+#First load
 running = True
 
 time = [">1 hour", ">2 hours", '>3 hours', '<1 hours', '<2 hours']
@@ -597,8 +619,8 @@ app_list = get_all_app_list()
 tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook"]
 temp_quest_app = app_list[0]
 temp_quest_tab = tab_list[0]
+load_past_data()
 
-#First load
 p1 = threading.Thread(target=update_time)
 
 p1.start()
