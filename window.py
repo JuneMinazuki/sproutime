@@ -37,8 +37,12 @@ class Tabview(ctk.CTkTabview):
             
         self.tab1_thread = None
         self.tab2_thread = None
+
         self.create_tab1_widgets()
         self.create_tab2_widgets()
+        self.create_tab3_widgets()
+        self.create_tab4_widgets()
+
         self.start_updating()
 
     def create_tab1_widgets(self):
@@ -98,11 +102,18 @@ class Tabview(ctk.CTkTabview):
         self.completed_list_TB = ctk.CTkTextbox(self.tab2, width=1080, height=180)
         self.completed_list_TB.grid(row=0, column=0, columnspan=3)
 
-        for col in range(3):
+        for col in range(1):
             self.tab2.columnconfigure(col, weight=1)
 
-        for row in range(5):
-            self.tab2.rowconfigure(row, weight=1)
+    def create_tab3_widgets(self):
+        self.tab3 = self.add("Stats")
+
+
+    def create_tab4_widgets(self):
+        self.tab4 = self.add("Settings")
+        theme_selector = ctk.CTkOptionMenu(master=self.tab4, values=theme_options, command=lambda theme: ctk.set_appearance_mode(theme))  # Change theme
+        theme_selector.pack(padx=20, pady=20)
+        theme_selector.set("System")  # Set default theme to "System"
 
     def update_tab1(self):
         global app_dict, app_time_update, quest_complete_update, total_points, quest_list_update
@@ -150,9 +161,6 @@ class Tabview(ctk.CTkTabview):
 
             sleep(update_tick)
 
-    def update_tab2(self):
-        pass
-
     def start_updating(self):
         tab = self.get()
         self.is_tab1_active = tab == "Progress"
@@ -161,10 +169,6 @@ class Tabview(ctk.CTkTabview):
         if self.is_tab1_active and (self.tab1_thread is None or not self.tab1_thread.is_alive()):
             self.tab1_thread = threading.Thread(target=self.update_tab1, daemon=True)
             self.tab1_thread.start()
-
-        if self.is_tab2_active and (self.tab2_thread is None or not self.tab2_thread.is_alive()):
-            self.tab2_thread = threading.Thread(target=self.update_tab2, daemon=True)
-            self.tab2_thread.start()
 
     def tab_changed(self):
         self.start_updating()
@@ -538,6 +542,7 @@ app_list = get_all_app_list()
 tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook"]
 temp_quest_app = app_list[0]
 temp_quest_tab = tab_list[0]
+theme_options = ["Light", "Dark", "System"]
 
 #First load
 p1 = threading.Thread(target=update_time)
