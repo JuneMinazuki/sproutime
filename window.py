@@ -121,16 +121,14 @@ class Tabview(ctk.CTkTabview):
                 cursor = conn.cursor()
                 
                 try:
-                    cursor.execute("SELECT quest_id, score_earn FROM quest_completion")
+                    cursor.execute("SELECT app_name, time, maximum, score_earn FROM quest_completion")
                     quests = cursor.fetchall()
                     
                     self.completed_list_TB.delete("0.0", "end")
                     for quest in quests:
-                        cursor.execute("SELECT app_name, time, maximum FROM quest WHERE quest_id = ?", (quest[0],))
-                        quest_name = cursor.fetchone()
-                        maximum = ">" if quest_name[2] == 1 else "<"
+                        maximum = ">" if quest[2] == 1 else "<"
                         
-                        self.completed_list_TB.insert("end", f'{quest_name[0]} {maximum} {int(quest_name[1]) / 60} hour(s): Completed +{quest[1]} points\n')
+                        self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An error occurred: {e}")
                     conn.rollback()
@@ -281,9 +279,25 @@ class DebugMenu(ctk.CTkToplevel):
                                                     onvalue=3600, offvalue=1, width=10)
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
         
+        #Clear quest
+        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Quest", command=self.reset_database)
+        self.drop_table_button.grid(row=1, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        
+        #Clear quest_completion
+        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Completed", command=self.reset_database)
+        self.drop_table_button.grid(row=2, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        
+        #Clear app_time
+        self.drop_table_button = ctk.CTkButton(master=self, text="Clear App Time", command=self.reset_database)
+        self.drop_table_button.grid(row=3, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        
+        #Clear streak
+        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Streak", command=self.reset_database)
+        self.drop_table_button.grid(row=4, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        
         #Drop every table
         self.drop_table_button = ctk.CTkButton(master=self, text="Reset Database", command=self.reset_database)
-        self.drop_table_button.grid(row=1, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        self.drop_table_button.grid(row=5, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
     def reset_database(self):
         global app_time_update, quest_complete_update, quest_list_update
@@ -313,7 +327,7 @@ class DebugMenu(ctk.CTkToplevel):
         setup_sql()
         app_time_update = True
         quest_list_update = True
-        #quest_complete_update = True
+        quest_complete_update = True
         
 
     def close_debug_menu(self):
@@ -337,10 +351,12 @@ def setup_sql():
         
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS quest_completion (
-                date TEXT PRIMARY KEY, --Store as YYYY-MM-DD
-                quest_id INTEGER NOT NULL,
-                score_earn INTEGER NOT NULL,
-                FOREIGN KEY(quest_id) REFERENCES quest(quest_id)
+                log_id INTEGER PRIMARY KEY,
+                date TEXT NOT NULL, --Store as YYYY-MM-DD
+                app_name TEXT NOT NULL,
+                time INTEGER NOT NULL,
+                maximum INTEGER NOT NULL,
+                score_earn INTEGER NOT NULL
             );
         ''')
         
@@ -475,17 +491,25 @@ def quest_done_noti(app_name):
         noti.show()
 
 def load_past_data():
-    global app_time_update, app_dict
+    global app_time_update, app_dict, completed_list, failed_list
     
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
     try:
+        #App Time
         cursor.execute("SELECT app_name, duration FROM app_time WHERE date = ?", (str(date.today()),))
         apps = cursor.fetchall()
         
         for app in apps:
             app_dict[app[0]] = app[1]
+            
+        #Completed quest
+        cursor.execute("SELECT app_name FROM quest_completion WHERE date = ?", (str(date.today()),))
+        apps = cursor.fetchall()
+        
+        for app in apps:
+            completed_list.append(app[0])
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
@@ -496,7 +520,7 @@ def load_past_data():
     app_time_update = True
 
 def update_time():
-    global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, _d_time_speed, task_score
+    global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, _d_time_speed, task_score, total_points, completed_list
     
     while running:
         now = datetime.now()
@@ -517,16 +541,18 @@ def update_time():
             else:
                 app_dict[app_name] = _d_time_speed.get()
                 
-            if (quest_list) and (app_name in quest_list) and ((app_name not in completed_list) or (app_name not in failed_list)) and (quest_dict[app_name]["time"] <= app_dict[app_name]):
+            if (quest_list) and (app_name in quest_list) and (app_name not in completed_list) and (app_name not in failed_list) and (quest_dict[app_name]["time"] <= app_dict[app_name]):
                 if quest_dict[app_name]["maximum"] == ">":
                     conn = sqlite3.connect('sproutime.db')
                     cursor = conn.cursor()
                     
                     try:
-                        cursor.execute("SELECT quest_id FROM quest WHERE app_name = ?", (app_name,))
-                        quest_id = cursor.fetchone()[0]
+                        cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
+                        quest = cursor.fetchone()
+                        quest_time = quest[0]
+                        maximum = quest[1]
                         
-                        cursor.execute("INSERT INTO quest_completion (date, quest_id, score_earn) VALUES (?, ?, ?)", (str(date.today()), quest_id, task_score))
+                        cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
                         conn.commit()
                     except sqlite3.Error as e:
                         if DEBUG: print(f"An error occurred: {e}")
@@ -534,7 +560,8 @@ def update_time():
                     finally:
                         if conn:
                             conn.close()
-                    
+
+                    completed_list.append(app_name)
                     quest_done_noti(app_name)
                     total_points += task_score
                             
@@ -608,7 +635,7 @@ _d_time_speed = ctk.IntVar(value=1)
 #GUI Update Request
 app_time_update = False
 quest_list_update = False
-quest_complete_update = False
+quest_complete_update = True
 
 #First load
 running = True
