@@ -1,4 +1,3 @@
-
 import sys
 
 #Check OS and popup for missing libraries
@@ -38,8 +37,12 @@ class Tabview(ctk.CTkTabview):
             
         self.tab1_thread = None
         self.tab2_thread = None
+
         self.create_tab1_widgets()
         self.create_tab2_widgets()
+        self.create_tab3_widgets()
+        self.create_tab4_widgets()
+
         self.start_updating()
 
     def create_tab1_widgets(self):
@@ -49,7 +52,7 @@ class Tabview(ctk.CTkTabview):
 
         #Textbox
         self.app_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
-        self.app_list_TB.grid(row=0, column=0, columnspan=3)
+        self.app_list_TB.grid(row=0, column=0, columnspan=4)
 
         #App Option
         self.app_dropdown = ctk.CTkComboBox(self.tab1,values=app_list, command=self.combobox_callback)
@@ -57,11 +60,11 @@ class Tabview(ctk.CTkTabview):
 
         #Time Option
         self.time_dropdown = ctk.CTkComboBox(self.tab1,values=time, command=self.timebox_callback)
-        self.time_dropdown.grid(row=1, column=2,sticky='e')
+        self.time_dropdown.grid(row=1, column=3,sticky='e')
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
         self.tabBox = ctk.CTkComboBox(self.tab1, values=tab_list, command=self.tabBox_callback)
-        self.tabBox.grid(row=1, column=1, padx=20, pady=10)
+        self.tabBox.grid(row=1, column=2)
         self.tabBox.set(tab_list[0])
         self.tabBox.grid_remove()
             
@@ -71,15 +74,15 @@ class Tabview(ctk.CTkTabview):
         
         #Delete Button
         self.delete_button = ctk.CTkButton(self.tab1, text="Delete", command=self.delete_quest)
-        self.delete_button.grid(row=2, column=1, sticky='e')
+        self.delete_button.grid(row=2, column=2)
 
         #Save Button
         self.save_button = ctk.CTkButton(self.tab1, text="Save", command=self.save_quest_time)
-        self.save_button.grid(row=2, column=2, sticky='e')
+        self.save_button.grid(row=2, column=3, sticky='e')
 
         #Quest Saved Textbox
         self.quest_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
-        self.quest_list_TB.grid(row=3, column=0, columnspan = 3)
+        self.quest_list_TB.grid(row=3, column=0, columnspan = 4)
         quest_list_update = True
 
         for col in range(3):
@@ -99,11 +102,18 @@ class Tabview(ctk.CTkTabview):
         self.completed_list_TB = ctk.CTkTextbox(self.tab2, width=1080, height=180)
         self.completed_list_TB.grid(row=0, column=0, columnspan=3)
 
-        for col in range(3):
+        for col in range(1):
             self.tab2.columnconfigure(col, weight=1)
 
-        for row in range(5):
-            self.tab2.rowconfigure(row, weight=1)
+    def create_tab3_widgets(self):
+        self.tab3 = self.add("Stats")
+
+
+    def create_tab4_widgets(self):
+        self.tab4 = self.add("Settings")
+        theme_selector = ctk.CTkOptionMenu(master=self.tab4, values=theme_options, command=lambda theme: ctk.set_appearance_mode(theme))  # Change theme
+        theme_selector.pack(padx=20, pady=20)
+        theme_selector.set("System")  # Set default theme to "System"
 
     def update_tab1(self):
         global app_dict, app_time_update, quest_complete_update, total_points, quest_list_update, task_score
@@ -166,9 +176,6 @@ class Tabview(ctk.CTkTabview):
 
             sleep(update_tick)
 
-    def update_tab2(self):
-        pass
-
     def start_updating(self):
         tab = self.get()
         self.is_tab1_active = tab == "Progress"
@@ -178,17 +185,13 @@ class Tabview(ctk.CTkTabview):
             self.tab1_thread = threading.Thread(target=self.update_tab1, daemon=True)
             self.tab1_thread.start()
 
-        if self.is_tab2_active and (self.tab2_thread is None or not self.tab2_thread.is_alive()):
-            self.tab2_thread = threading.Thread(target=self.update_tab2, daemon=True)
-            self.tab2_thread.start()
-
     def tab_changed(self):
         self.start_updating()
 
     def combobox_callback(self, choice):  
         global temp_quest_app
         temp_quest_app = choice
-        if choice == "Google Chrome":
+        if choice == google:
             self.tabBox.grid()
         else:
             self.tabBox.grid_remove()
@@ -228,7 +231,7 @@ class Tabview(ctk.CTkTabview):
         time_map = {'1 hour': 60, '2 hours': 120, '3 hours': 180}
         maximum = max_map.get(temp_quest_time[0])
         minutes = time_map.get(temp_quest_time[1:])
-        name = temp_quest_tab if temp_quest_app == "Google Chrome" and temp_quest_tab != "Any Tabs" else temp_quest_app
+        name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
 
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
@@ -464,9 +467,11 @@ def get_active_app_name():
         
     elif sys.platform == 'win32':
         foregroundApp = win32gui.GetForegroundWindow()
-        appTitle = win32gui.GetWindowText(foregroundApp)
-        appName = appTitle.split(" - ")[-1]
-        if appName == "Google Chrome": 
+        _, pid = win32process.GetWindowThreadProcessId(foregroundApp)
+        process = psutil.Process(pid)
+        process_name = process.name()
+        appName = process_name.split(".")[0].capitalize()
+        if appName == "Chrome": 
             tabName = get_active_tab_name()
             if tabName == "URL not detected":
                 pass
@@ -487,21 +492,20 @@ def get_all_app_list():
                     app_list.append(app.localizedName())
                     
         elif sys.platform == 'win32':
-            for process in psutil.process_iter(['pid', 'name']): # Loops through all running processes 
+            for process in psutil.process_iter(['pid', 'name']):
                 pid = process.info['pid']
-                ignored_processes = ["", "Windows Input Experience", "Program Manager"]
+                ignored_processes = ["Applicationframehost", "Textinputhost"]
 
-                def enumWindowsArguments(handle, __): # This will be called for each top-level window to exclude all other background processes (refer to EnumWindows)
-                    threadID, foundPID = win32process.GetWindowThreadProcessId(handle) # Get the Process ID for the current window handle
+                def enumWindowsArguments(handle, __):
+                    threadID, foundPID = win32process.GetWindowThreadProcessId(handle)
 
-                    if foundPID == pid and win32gui.IsWindowVisible(handle): # This checks if it is actually a visible window
+                    if foundPID == pid and win32gui.IsWindowVisible(handle):
                         window_title = win32gui.GetWindowText(handle)
-                        app_name = window_title.split(" - ")[-1]
+                        app_name = process.info["name"].split(".")[0].capitalize() # Get all active app name
                         if app_name not in app_list and app_name not in ignored_processes: 
                             app_list.append(app_name)
 
-                win32gui.EnumWindows(enumWindowsArguments, None) # Enumerate all top-level windows
-
+                win32gui.EnumWindows(enumWindowsArguments, None)
         return app_list
 
 def get_active_tab_name():
@@ -587,6 +591,7 @@ def load_past_data():
             
     app_time_update = True
 
+
 def update_time():
     global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, _d_time_speed, task_score, total_points, completed_list
     
@@ -639,7 +644,7 @@ def update_time():
 
             app_time_update = True
             sleep(1)
-            
+    
 def update_log(today):
     global app_dict
     conn = sqlite3.connect('sproutime.db')
@@ -696,6 +701,11 @@ failed_list = []
 total_points = 0    # Right now +100 per completed quest
 task_score = 100
 
+google = "Google Chrome"
+
+if sys.platform == "win32":
+    google = "Chrome"
+
 #Debug Menu Var
 debug_menu = None
 _d_time_speed = ctk.IntVar(value=1)
@@ -712,6 +722,7 @@ time = [">1 hour", ">2 hours", '>3 hours', '<1 hours', '<2 hours']
 temp_quest_time = time[0]
 app_list = get_all_app_list()
 tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook"]
+theme_options = ["Light", "Dark", "System"]
 temp_quest_app = app_list[0]
 temp_quest_tab = tab_list[0]
 load_past_data()
