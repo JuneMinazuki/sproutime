@@ -7,6 +7,7 @@ try:
     import threading
     from time import sleep
     import sqlite3
+    from datetime import datetime, date, timedelta
 
     if sys.platform == 'darwin':
         import AppKit
@@ -105,7 +106,7 @@ class Tabview(ctk.CTkTabview):
             self.tab2.rowconfigure(row, weight=1)
 
     def update_tab1(self):
-        global app_dict, app_time_update, quest_complete_update, total_points, quest_list_update
+        global app_dict, app_time_update, quest_complete_update, total_points, quest_list_update, task_score
         
         while running:
             if app_time_update:
@@ -116,9 +117,27 @@ class Tabview(ctk.CTkTabview):
                 app_time_update = False
 
             if quest_complete_update:
-                self.completed_list_TB.insert("end", f'{completed_list[-1]} {quest_dict[completed_list[-1]]["maximum"]} {quest_dict[completed_list[-1]]["time"] / 60 / 60} hour(s): Completed +100 points\n')
-                quest_done_noti(completed_list[-1])
-                total_points += 100
+                conn = sqlite3.connect('sproutime.db')
+                cursor = conn.cursor()
+                
+                try:
+                    cursor.execute("SELECT quest_id, score_earn FROM quest_completion")
+                    quests = cursor.fetchall()
+                    
+                    self.completed_list_TB.delete("0.0", "end")
+                    for quest in quests:
+                        cursor.execute("SELECT app_name, time, maximum FROM quest WHERE quest_id = ?", (quest[0],))
+                        quest_name = cursor.fetchone()
+                        maximum = ">" if quest_name[2] == 1 else "<"
+                        
+                        self.completed_list_TB.insert("end", f'{quest_name[0]} {maximum} {int(quest_name[1]) / 60} hour(s): Completed +{quest[1]} points\n')
+                except sqlite3.Error as e:
+                    if DEBUG: print(f"An error occurred: {e}")
+                    conn.rollback()
+                finally:
+                    if conn:
+                        conn.close()
+
                 quest_complete_update = False
                 
             if quest_list_update:
@@ -134,9 +153,8 @@ class Tabview(ctk.CTkTabview):
                     quest_list.clear()
                     for quest in quests:
                         maximum = ">" if quest[1] == 1 else "<"
-                        time = quest[2] / 60
 
-                        self.quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{time} hour\n')
+                        self.quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{quest[2] / 60} hour\n')
                         
                         quest_list.append(quest[0])
                         quest_dict[quest[0]] = {"maximum": maximum, "time": quest[2] * 60}
@@ -207,7 +225,7 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
 
     def save_quest_time(self):
-        global temp_quest_app, temp_quest_tab, temp_quest_time
+        global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update
         max_map = {'>': 1, '<': 0}
         time_map = {'1 hour': 60, '2 hours': 120, '3 hours': 180}
         maximum = max_map.get(temp_quest_time[0])
@@ -320,7 +338,7 @@ def setup_sql():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS quest_completion (
                 date TEXT PRIMARY KEY, --Store as YYYY-MM-DD
-                quest_id TEXT NOT NULL,
+                quest_id INTEGER NOT NULL,
                 score_earn INTEGER NOT NULL,
                 FOREIGN KEY(quest_id) REFERENCES quest(quest_id)
             );
@@ -457,36 +475,75 @@ def quest_done_noti(app_name):
         noti.show()
 
 def update_time():
-    global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, tab_list, _d_time_speed
+    global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, _d_time_speed, task_score
     
     while running:
+        now = datetime.now()
+
+        if now.hour == 0 and now.minute == 0:
+            today = str(date.today() - timedelta(days = 1))
+            update_log(today)
+        
         with time_lock:
             app_name = get_active_app_name()
-            if quest_list:
-                if app_name in quest_list and app_name not in completed_list:
-                    if app_name in app_dict:
-                        if quest_dict[app_name]["maximum"] == ">":
-                            if quest_dict[app_name]["time"] > app_dict[app_name]:
-                                app_dict[app_name] += _d_time_speed.get()
-                            else:
-                                quest_complete_update = True
-                                completed_list.append(app_name)
-                        else:
-                            if quest_dict[app_name]["time"] < app_dict[app_name]:
-                                app_dict[app_name] += 1
-                                if app_name in tab_list:
-                                    app_dict["Google Chrome"] += _d_time_speed.get()
-                            else:
-                                pass
-                    else:
-                        app_dict[app_name] = _d_time_speed.get()
-                else:
-                    pass
-                
-                app_time_update = True
+            
+            if (app_name == "Python") or (app_name == "Sproutime"):
                 sleep(1)
+                continue
+            
+            if app_name in app_dict:
+                app_dict[app_name] += _d_time_speed.get()
             else:
-                pass
+                app_dict[app_name] = _d_time_speed.get()
+                
+            if (quest_list) and (app_name in quest_list) and ((app_name not in completed_list) or (app_name not in failed_list)) and (quest_dict[app_name]["time"] <= app_dict[app_name]):
+                if quest_dict[app_name]["maximum"] == ">":
+                    conn = sqlite3.connect('sproutime.db')
+                    cursor = conn.cursor()
+                    
+                    try:
+                        cursor.execute("SELECT quest_id FROM quest WHERE app_name = ?", (app_name,))
+                        quest_id = cursor.fetchone()[0]
+                        
+                        cursor.execute("INSERT INTO quest_completion (date, quest_id, score_earn) VALUES (?, ?, ?)", (date.today(), quest_id, task_score))
+                        conn.commit()
+                    except sqlite3.Error as e:
+                        if DEBUG: print(f"An error occurred: {e}")
+                        conn.rollback()
+                    finally:
+                        if conn:
+                            conn.close()
+                    
+                    quest_done_noti(app_name)
+                    total_points += task_score
+                            
+                elif quest_dict[app_name]["maximum"] == "<":
+                    failed_list.append(app_name)
+                quest_complete_update = True
+
+            app_time_update = True
+            sleep(1)
+            
+def update_log(today):
+    global app_dict
+    conn = sqlite3.connect('sproutime.db')
+    cursor = conn.cursor()
+    
+    try:
+        for app in app_dict:
+            cursor.execute("SELECT COUNT(*) FROM app_time WHERE app_name = ? AND date = ?", (app, today))
+            if cursor.fetchone()[0] > 0:
+                cursor.execute("UPDATE app_time SET duration = duration + ? WHERE app_name = ?", (app_dict[app], app))
+            else:
+                cursor.execute("INSERT INTO app_time (app_name, date, duration) VALUES (?, ?, ?)", (app, today, app_dict[app]))
+        conn.commit()
+        app_dict = {}
+    except sqlite3.Error as e:
+        if DEBUG: print(f"An error occurred: {e}")
+        conn.rollback()
+    finally:
+        if conn:
+            conn.close()
 
 def on_closing(): #when user close the program
     global running
@@ -495,7 +552,7 @@ def on_closing(): #when user close the program
     
     p1.join()
     
-    print("Window is closing!") #temp code
+    update_log(str(date.today()))
     sys.exit()
 
 #DEBUG
@@ -519,7 +576,9 @@ web_browser = ["Google Chrome"]
 quest_list = []
 quest_dict = {}
 completed_list = []
+failed_list = []
 total_points = 0    # Right now +100 per completed quest
+task_score = 100
 
 #Debug Menu Var
 debug_menu = None
@@ -532,7 +591,7 @@ quest_complete_update = False
 
 running = True
 
-time = [">1 hour", ">2 hours", '>3 hours']
+time = [">1 hour", ">2 hours", '>3 hours', '<1 hours', '<2 hours']
 temp_quest_time = time[0]
 app_list = get_all_app_list()
 tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook"]
