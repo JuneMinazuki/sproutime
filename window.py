@@ -440,6 +440,7 @@ DEBUG = 1 #Use this to lower the time check for app from minute to second to sav
 #SQLite Setup
 conn = sqlite3.connect('sproutime.db')
 cursor = conn.cursor()
+setup_sql()
 
 app = App()
 
