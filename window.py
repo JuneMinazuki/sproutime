@@ -22,62 +22,47 @@ def window():
     except ModuleNotFoundError as e:
         import tkinter
         tkinter.messagebox.showerror("Missing Libraries", str(e))
-
-    #DEBUG
-    DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
     
-    #SQLite Setup
-    conn = sqlite3.connect('sproutime.db')
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS quest (
-                id INTEGER PRIMARY KEY,
-                app_name TEXT NOT NULL,
-                time INTEGER NOT NULL,
-                maximum INTEGER NOT NULL
-            )
-        ''')
-        
-        #if DEBUG:
-            #cursor.execute(f"DELETE FROM quest")
-            #conn.commit()
-        
-    except sqlite3.Error as e:
-        if DEBUG: print(f"An error occurred: {e}")
-        conn.rollback()
-
-    global time_speed, temp_quest_app, temp_quest_time, temp_quest_tab, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points, tab_list, debug_menu
-    
-    #App Info
-    window = ctk.CTk()
-    window.geometry("1080x720")
-    window.title("Sproutime")
-    window.columnconfigure(1, weight=1)
-    window.columnconfigure(1, weight=1)
-    
-    #Thread Setup
-    running = False
-    time_lock = threading.Lock()
-    
-    #Global Var
-    update_tick = 1 if DEBUG else 60
-    app_dict = {}
-    temp_quest_app = ""
-    temp_quest_tab = ""
-    temp_quest_time = ""
-    web_browser = ["Google Chrome"]
-    quest_list = []
-    quest_dict = {}
-    completed_list = []
-    total_points = 0    # Right now +100 per completed quest
-    debug_menu = None
-    time_speed = ctk.IntVar(value=1)  
-
-    #GUI Update Request
-    app_time_update = False
-    quest_complete_update = False
+    def setup_sql(conn, cursor):    
+        try:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS quest (
+                    quest_id INTEGER PRIMARY KEY,
+                    app_name TEXT NOT NULL,
+                    time INTEGER NOT NULL,
+                    maximum INTEGER NOT NULL
+                );
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS quest_completion (
+                    date TEXT PRIMARY KEY, --Store as YYYY-MM-DD
+                    quest_id TEXT NOT NULL,
+                    score_earn INTEGER NOT NULL,
+                    FOREIGN KEY(quest_id) REFERENCES quest(quest_id)
+                );
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS app_time (
+                    log_id INTEGER PRIMARY KEY,
+                    app_name TEXT NOT NULL,
+                    date TEXT NOT NULL, --Store as YYYY-MM-DD
+                    duration INTEGER NOT NULL
+                );
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS streak (
+                    date TEXT PRIMARY KEY, --Store as YYYY-MM-DD
+                    quest_completed INTEGER NOT NULL,
+                    quest_Set INTEGER NOT NULL
+                );
+            ''')
+            
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
 
     def get_active_app_name():
         if sys.platform == 'darwin':
@@ -332,6 +317,45 @@ def window():
         
         print("Window is closing!") #temp code
         sys.exit()
+        
+        #DEBUG
+    DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
+    
+    #SQLite Setup
+    conn = sqlite3.connect('sproutime.db')
+    cursor = conn.cursor()
+    setup_sql(conn, cursor)
+
+    global time_speed, temp_quest_app, temp_quest_time, temp_quest_tab, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points, tab_list, debug_menu
+    
+    #App Info
+    window = ctk.CTk()
+    window.geometry("1080x720")
+    window.title("Sproutime")
+    window.columnconfigure(1, weight=1)
+    window.columnconfigure(1, weight=1)
+    
+    #Thread Setup
+    running = False
+    time_lock = threading.Lock()
+    
+    #Global Var
+    update_tick = 1 if DEBUG else 60
+    app_dict = {}
+    temp_quest_app = ""
+    temp_quest_tab = ""
+    temp_quest_time = ""
+    web_browser = ["Google Chrome"]
+    quest_list = []
+    quest_dict = {}
+    completed_list = []
+    total_points = 0    # Right now +100 per completed quest
+    debug_menu = None
+    time_speed = ctk.IntVar(value=1)  
+
+    #GUI Update Request
+    app_time_update = False
+    quest_complete_update = False
 
     running = True
     
