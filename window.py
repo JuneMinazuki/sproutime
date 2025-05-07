@@ -217,15 +217,15 @@ def update_time():
 
 class Tabview(ctk.CTkTabview):
     def __init__(self, master=None, **kwargs):
-        super().__init__(master, command=self._tab_changed, **kwargs)
+        super().__init__(master, command=self.tab_changed, **kwargs)
             
         self.tab1_thread = None
         self.tab2_thread = None
-        self._create_tab1_widgets()
-        self._create_tab2_widgets()
-        self._start_updating()
+        self.create_tab1_widgets()
+        self.create_tab2_widgets()
+        self.start_updating()
 
-    def _create_tab1_widgets(self):
+    def create_tab1_widgets(self):
         self.tab1 = self.add("Progress")
 
         #Textbox
@@ -234,11 +234,11 @@ class Tabview(ctk.CTkTabview):
 
         #App Option
         self.app_dropdown = ctk.CTkComboBox(self.tab1,values=app_list, command=self.combobox_callback)
-        self.app_dropdown.grid(row=1, column=0, padx=20, pady=10, sticky='w')
+        self.app_dropdown.grid(row=1, column=0,sticky='w')
 
         #Time Option
         self.time_dropdown = ctk.CTkComboBox(self.tab1,values=time, command=self.timebox_callback)
-        self.time_dropdown.grid(row=1, column=2, padx=20, pady=10, sticky='e')
+        self.time_dropdown.grid(row=1, column=2,sticky='e')
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
         self.tabBox = ctk.CTkComboBox(self.tab1, values=tab_list, command=self.tabBox_callback)
@@ -248,19 +248,19 @@ class Tabview(ctk.CTkTabview):
             
         #Refresh Button
         self.refresh_button = ctk.CTkButton(self.tab1, text="Refresh", command=self.refresh_app_list)
-        self.refresh_button.grid(row=2, column=0, padx=20, pady=10, sticky='w')
+        self.refresh_button.grid(row=2, column=0, sticky='w')
         
         #Delete Button
         self.delete_button = ctk.CTkButton(self.tab1, text="Delete", command=self.delete_quest)
-        self.delete_button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
+        self.delete_button.grid(row=2, column=1, sticky='e')
 
         #Save Button
         self.save_button = ctk.CTkButton(self.tab1, text="Save", command=self.save_quest_time)
-        self.save_button.grid(row=2, column=2, padx=20, pady=10, sticky='e')
+        self.save_button.grid(row=2, column=2, sticky='e')
 
         #Quest Saved Textbox
         self.quest_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
-        self.quest_list_TB.grid(row=3, column=0, columnspan = 2)
+        self.quest_list_TB.grid(row=3, column=0, columnspan = 3)
         self.update_quest_list()
 
         for col in range(3):
@@ -269,14 +269,20 @@ class Tabview(ctk.CTkTabview):
         for row in range(5):
             self.tab1.rowconfigure(row, weight=1)
 
-    def _create_tab2_widgets(self):
+    def create_tab2_widgets(self):
         self.tab2 = self.add("Score")
 
         #Completed Quests Textbox
         self.completed_list_TB = ctk.CTkTextbox(self.tab2, width=1080, height=180)
-        self.completed_list_TB.grid(row=0, column=0, columnspan=2)
+        self.completed_list_TB.grid(row=0, column=0, columnspan=3)
 
-    def _update_tab1(self):
+        for col in range(3):
+            self.tab2.columnconfigure(col, weight=1)
+
+        for row in range(5):
+            self.tab2.rowconfigure(row, weight=1)
+
+    def update_tab1(self):
         global app_dict, app_time_update, quest_complete_update, total_points
         while running:
             if app_time_update:
@@ -294,24 +300,24 @@ class Tabview(ctk.CTkTabview):
 
             sleep(update_tick)
 
-    def _update_tab2(self):
+    def update_tab2(self):
         pass
 
-    def _start_updating(self):
+    def start_updating(self):
         tab = self.get()
         self.is_tab1_active = tab == "Progress"
         self.is_tab2_active = tab == "Score"
 
         if self.is_tab1_active and (self.tab1_thread is None or not self.tab1_thread.is_alive()):
-            self.tab1_thread = threading.Thread(target=self._update_tab1, daemon=True)
+            self.tab1_thread = threading.Thread(target=self.update_tab1, daemon=True)
             self.tab1_thread.start()
 
         if self.is_tab2_active and (self.tab2_thread is None or not self.tab2_thread.is_alive()):
-            self.tab2_thread = threading.Thread(target=self._update_tab2, daemon=True)
+            self.tab2_thread = threading.Thread(target=self.update_tab2, daemon=True)
             self.tab2_thread.start()
 
-    def _tab_changed(self):
-        self._start_updating()
+    def tab_changed(self):
+        self.start_updating()
 
     def update_quest_list(self):
         try:
