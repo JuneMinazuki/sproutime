@@ -333,7 +333,7 @@ def window():
     window.geometry("1080x720")
     window.title("Sproutime")
     window.columnconfigure(1, weight=1)
-    window.columnconfigure(1, weight=1)
+    window.rowconfigure(1, weight=1)
     
     #Thread Setup
     running = False
@@ -429,18 +429,29 @@ class DebugMenu(ctk.CTkToplevel):
         super().__init__(parent)
         self.geometry("200x150")
         self.title("Debug Menu")
-        self.label = ctk.CTkLabel(self, text="This is a debug menu!")
-        self.label.grid(row=0, column=0)
+        self.columnconfigure(1, weight=1)
+        self.rowconfigure(1, weight=1)
         
-        self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text="CTkCheckBox", command=self.time_speed_check,
-                                     variable=time_speed, onvalue=3600, offvalue=1)
-        self.time_speed_checkbox.grid(row=1, column=0)
+        self.setup_menu()
 
         self.protocol("WM_DELETE_WINDOW", self.close_debug_menu) # Handle window closing
+    
+    def setup_menu(self):
+        #Speed up time
+        self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text="CTkCheckBox", command=self.time_speed_check,
+                                     variable=time_speed, onvalue=3600, offvalue=1)
+        self.time_speed_checkbox.grid(row=0, column=0)
         
+        #Drop every table
+        self.drop_table_button = ctk.CTkButton(master=window, text="Reset Database", command=self.reset_database)
+        self.drop_table_button.grid(row=1, column=0)
+    
     def time_speed_check(self):
         global time_speed
         print("checkbox toggled, current value:", time_speed.get())
+        
+    def reset_database(self):
+        window.setup_sql()
 
     def close_debug_menu(self):
         global debug_menu
