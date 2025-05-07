@@ -280,25 +280,94 @@ class DebugMenu(ctk.CTkToplevel):
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
         
         #Clear quest
-        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Quest", command=self.reset_database)
+        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Quest", command=self.clear_quest)
         self.drop_table_button.grid(row=1, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
         
         #Clear quest_completion
-        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Completed", command=self.reset_database)
+        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Completed", command=self.clear_completed)
         self.drop_table_button.grid(row=2, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
         
         #Clear app_time
-        self.drop_table_button = ctk.CTkButton(master=self, text="Clear App Time", command=self.reset_database)
+        self.drop_table_button = ctk.CTkButton(master=self, text="Clear App Time", command=self.clear_app)
         self.drop_table_button.grid(row=3, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
         
         #Clear streak
-        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Streak", command=self.reset_database)
+        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Streak", command=self.clear_quest_streak)
         self.drop_table_button.grid(row=4, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
         
         #Drop every table
         self.drop_table_button = ctk.CTkButton(master=self, text="Reset Database", command=self.reset_database)
         self.drop_table_button.grid(row=5, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
+    def clear_quest(self):
+        global quest_list_update
+        
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("DELETE FROM quest")
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+        
+        quest_list_update = True
+    
+    def clear_completed(self):
+        global quest_complete_update
+        
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("DELETE FROM quest_completion")
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+        
+        quest_complete_update = True
+    
+    def clear_app(self):
+        global app_time_update, app_dict
+        
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("DELETE FROM app_time")
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+        
+        app_dict = {}
+        app_time_update = True
+        
+    def clear_quest_streak(self):    
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("DELETE FROM quest")
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+            
     def reset_database(self):
         global app_time_update, quest_complete_update, quest_list_update
         
@@ -329,7 +398,6 @@ class DebugMenu(ctk.CTkToplevel):
         quest_list_update = True
         quest_complete_update = True
         
-
     def close_debug_menu(self):
         global debug_menu
         debug_menu = None
