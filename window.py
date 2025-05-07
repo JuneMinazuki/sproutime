@@ -52,7 +52,7 @@ class Tabview(ctk.CTkTabview):
 
         #Textbox
         self.app_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
-        self.app_list_TB.grid(row=0, column=0, columnspan=3)
+        self.app_list_TB.grid(row=0, column=0, columnspan=4)
 
         #App Option
         self.app_dropdown = ctk.CTkComboBox(self.tab1,values=app_list, command=self.combobox_callback)
@@ -60,11 +60,11 @@ class Tabview(ctk.CTkTabview):
 
         #Time Option
         self.time_dropdown = ctk.CTkComboBox(self.tab1,values=time, command=self.timebox_callback)
-        self.time_dropdown.grid(row=1, column=2,sticky='e')
+        self.time_dropdown.grid(row=1, column=3,sticky='e')
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
         self.tabBox = ctk.CTkComboBox(self.tab1, values=tab_list, command=self.tabBox_callback)
-        self.tabBox.grid(row=1, column=1, padx=20, pady=10)
+        self.tabBox.grid(row=1, column=2)
         self.tabBox.set(tab_list[0])
         self.tabBox.grid_remove()
             
@@ -74,15 +74,15 @@ class Tabview(ctk.CTkTabview):
         
         #Delete Button
         self.delete_button = ctk.CTkButton(self.tab1, text="Delete", command=self.delete_quest)
-        self.delete_button.grid(row=2, column=1, sticky='e')
+        self.delete_button.grid(row=2, column=2)
 
         #Save Button
         self.save_button = ctk.CTkButton(self.tab1, text="Save", command=self.save_quest_time)
-        self.save_button.grid(row=2, column=2, sticky='e')
+        self.save_button.grid(row=2, column=3, sticky='e')
 
         #Quest Saved Textbox
         self.quest_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
-        self.quest_list_TB.grid(row=3, column=0, columnspan = 3)
+        self.quest_list_TB.grid(row=3, column=0, columnspan = 4)
         quest_list_update = True
 
         for col in range(3):
@@ -176,7 +176,7 @@ class Tabview(ctk.CTkTabview):
     def combobox_callback(self, choice):  
         global temp_quest_app
         temp_quest_app = choice
-        if choice == "Google Chrome":
+        if choice == google:
             self.tabBox.grid()
         else:
             self.tabBox.grid_remove()
@@ -211,12 +211,12 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
 
     def save_quest_time(self):
-        global temp_quest_app, temp_quest_tab, temp_quest_time
+        global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update
         max_map = {'>': 1, '<': 0}
         time_map = {'1 hour': 60, '2 hours': 120, '3 hours': 180}
         maximum = max_map.get(temp_quest_time[0])
         minutes = time_map.get(temp_quest_time[1:])
-        name = temp_quest_tab if temp_quest_app == "Google Chrome" and temp_quest_tab != "Any Tabs" else temp_quest_app
+        name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
 
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
@@ -366,9 +366,11 @@ def get_active_app_name():
         
     elif sys.platform == 'win32':
         foregroundApp = win32gui.GetForegroundWindow()
-        appTitle = win32gui.GetWindowText(foregroundApp)
-        appName = appTitle.split(" - ")[-1]
-        if appName == "Google Chrome": 
+        _, pid = win32process.GetWindowThreadProcessId(foregroundApp)
+        process = psutil.Process(pid)
+        process_name = process.name()
+        appName = process_name.split(".")[0].capitalize()
+        if appName == "Chrome": 
             tabName = get_active_tab_name()
             if tabName == "URL not detected":
                 pass
@@ -389,21 +391,20 @@ def get_all_app_list():
                     app_list.append(app.localizedName())
                     
         elif sys.platform == 'win32':
-            for process in psutil.process_iter(['pid', 'name']): # Loops through all running processes 
+            for process in psutil.process_iter(['pid', 'name']):
                 pid = process.info['pid']
-                ignored_processes = ["", "Windows Input Experience", "Program Manager"]
+                ignored_processes = ["Applicationframehost", "Textinputhost"]
 
-                def enumWindowsArguments(handle, __): # This will be called for each top-level window to exclude all other background processes (refer to EnumWindows)
-                    threadID, foundPID = win32process.GetWindowThreadProcessId(handle) # Get the Process ID for the current window handle
+                def enumWindowsArguments(handle, __):
+                    threadID, foundPID = win32process.GetWindowThreadProcessId(handle)
 
-                    if foundPID == pid and win32gui.IsWindowVisible(handle): # This checks if it is actually a visible window
+                    if foundPID == pid and win32gui.IsWindowVisible(handle):
                         window_title = win32gui.GetWindowText(handle)
-                        app_name = window_title.split(" - ")[-1]
+                        app_name = process.info["name"].split(".")[0].capitalize() # Get all active app name
                         if app_name not in app_list and app_name not in ignored_processes: 
                             app_list.append(app_name)
 
-                win32gui.EnumWindows(enumWindowsArguments, None) # Enumerate all top-level windows
-
+                win32gui.EnumWindows(enumWindowsArguments, None)
         return app_list
 
 def get_active_tab_name():
@@ -479,7 +480,7 @@ def update_time():
                             if quest_dict[app_name]["time"] < app_dict[app_name]:
                                 app_dict[app_name] += 1
                                 if app_name in tab_list:
-                                    app_dict["Google Chrome"] += _d_time_speed.get()
+                                    app_dict[google] += _d_time_speed.get()
                             else:
                                 pass
                     else:
@@ -524,6 +525,11 @@ quest_list = []
 quest_dict = {}
 completed_list = []
 total_points = 0    # Right now +100 per completed quest
+
+google = "Google Chrome"
+
+if sys.platform == "win32":
+    google = "Chrome"
 
 #Debug Menu Var
 debug_menu = None
