@@ -63,7 +63,6 @@ def window():
     
     #Global Var
     update_tick = 1 if DEBUG else 60
-    time_speed = ctk.IntVar(value=1)  
     app_dict = {}
     temp_quest_app = ""
     temp_quest_tab = ""
@@ -74,6 +73,7 @@ def window():
     completed_list = []
     total_points = 0    # Right now +100 per completed quest
     debug_menu = None
+    time_speed = ctk.IntVar(value=1)  
 
     #GUI Update Request
     app_time_update = False
