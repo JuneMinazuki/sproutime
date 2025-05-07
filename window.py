@@ -42,6 +42,8 @@ class Tabview(ctk.CTkTabview):
         self.start_updating()
 
     def create_tab1_widgets(self):
+        global quest_list_update
+        
         self.tab1 = self.add("Progress")
 
         #Textbox
@@ -77,7 +79,7 @@ class Tabview(ctk.CTkTabview):
         #Quest Saved Textbox
         self.quest_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
         self.quest_list_TB.grid(row=3, column=0, columnspan = 3)
-        self.update_quest_list()
+        quest_list_update = True
 
         for col in range(3):
             self.tab1.columnconfigure(col, weight=1)
@@ -103,7 +105,8 @@ class Tabview(ctk.CTkTabview):
             self.tab2.rowconfigure(row, weight=1)
 
     def update_tab1(self):
-        global app_dict, app_time_update, quest_complete_update, total_points
+        global app_dict, app_time_update, quest_complete_update, total_points, quest_list_update
+        
         while running:
             if app_time_update:
                 self.app_list_TB.delete("0.0", "end")
@@ -117,6 +120,33 @@ class Tabview(ctk.CTkTabview):
                 quest_done_noti(completed_list[-1])
                 total_points += 100
                 quest_complete_update = False
+                
+            if quest_list_update:
+                conn = sqlite3.connect('sproutime.db')
+                cursor = conn.cursor()
+                
+                try:
+                    cursor.execute("SELECT app_name, maximum, time FROM quest")
+                    quests = cursor.fetchall()
+                    
+                    self.quest_list_TB.delete("0.0", "end")
+                    quest_dict.clear()
+                    quest_list.clear()
+                    for quest in quests:
+                        maximum = ">" if quest[1] == 1 else "<"
+                        time = quest[2] / 60
+
+                        self.quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{time} hour\n')
+                        
+                        quest_list.append(quest[0])
+                        quest_dict[quest[0]] = {"maximum": maximum, "time": quest[2] * 60}
+                except sqlite3.Error as e:
+                    if DEBUG: print(f"An error occurred: {e}")
+                    conn.rollback()
+                finally:
+                    if conn:
+                        conn.close()
+                quest_list_update = False
 
             sleep(update_tick)
 
@@ -139,26 +169,6 @@ class Tabview(ctk.CTkTabview):
     def tab_changed(self):
         self.start_updating()
 
-    def update_quest_list(self):
-        try:
-            cursor.execute("SELECT app_name, maximum, time FROM quest")
-            quests = cursor.fetchall()
-            
-            self.quest_list_TB.delete("0.0", "end")
-            quest_dict.clear()
-            quest_list.clear()
-            for quest in quests:
-                maximum = ">" if quest[1] == 1 else "<"
-                time = quest[2] / 60
-
-                self.quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{time} hour\n')
-                
-                quest_list.append(quest[0])
-                quest_dict[quest[0]] = {"maximum": maximum, "time": quest[2] * 60}
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
-            conn.rollback()
-
     def combobox_callback(self, choice):  
         global temp_quest_app
         temp_quest_app = choice
@@ -179,10 +189,22 @@ class Tabview(ctk.CTkTabview):
         self.app_dropdown.configure(values=get_all_app_list())
 
     def delete_quest(self):
-        global temp_quest_app
-        cursor.execute("DELETE FROM quest WHERE app_name = ?", (temp_quest_app,))
-        conn.commit()
-        self.update_quest_list()
+        global temp_quest_app, quest_list_update
+        
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("DELETE FROM quest WHERE app_name = ?", (temp_quest_app,))
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+        
+        quest_list_update = True
 
     def save_quest_time(self):
         global temp_quest_app, temp_quest_tab, temp_quest_time
@@ -192,13 +214,24 @@ class Tabview(ctk.CTkTabview):
         minutes = time_map.get(temp_quest_time[1:])
         name = temp_quest_tab if temp_quest_app == "Google Chrome" and temp_quest_tab != "Any Tabs" else temp_quest_app
 
-        cursor.execute("SELECT COUNT(*) FROM quest WHERE app_name = ?", (name,))
-        if cursor.fetchone()[0] > 0:
-            cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (minutes, maximum, name))
-        else:
-            cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (name, minutes, maximum))
-        conn.commit()
-        self.update_quest_list()
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("SELECT COUNT(*) FROM quest WHERE app_name = ?", (name,))
+            if cursor.fetchone()[0] > 0:
+                cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (minutes, maximum, name))
+            else:
+                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (name, minutes, maximum))
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        quest_list_update = True
         
     def open_debug_menu(self):
         global debug_menu
@@ -235,14 +268,45 @@ class DebugMenu(ctk.CTkToplevel):
         self.drop_table_button.grid(row=1, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
     def reset_database(self):
+        global app_time_update, quest_complete_update, quest_list_update
+        
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = cursor.fetchall()
+
+            for table in tables:
+                table_name = table[0]
+                try:
+                    cursor.execute(f"DROP TABLE IF EXISTS {table_name};")
+                    if DEBUG: print(f"Dropped table: {table_name}")
+                except sqlite3.Error as e:
+                    if DEBUG: print(f"Error dropping table {table_name}: {e}")
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+        
         setup_sql()
+        app_time_update = True
+        quest_list_update = True
+        #quest_complete_update = True
+        
 
     def close_debug_menu(self):
         global debug_menu
         debug_menu = None
         self.destroy() 
     
-def setup_sql():    
+def setup_sql():   
+    conn = sqlite3.connect('sproutime.db')
+    cursor = conn.cursor()
+ 
     try:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS quest (
@@ -278,10 +342,12 @@ def setup_sql():
                 quest_Set INTEGER NOT NULL
             );
         ''')
-        
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
+    finally:
+        if conn:
+            conn.close()
 
 def get_active_app_name():
     if sys.platform == 'darwin':
@@ -429,17 +495,12 @@ def on_closing(): #when user close the program
     
     p1.join()
     
-    conn.close()
-    
     print("Window is closing!") #temp code
     sys.exit()
 
 #DEBUG
 DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
 
-#SQLite Setup
-conn = sqlite3.connect('sproutime.db')
-cursor = conn.cursor()
 setup_sql()
 
 app = App()
@@ -466,6 +527,7 @@ _d_time_speed = ctk.IntVar(value=1)
 
 #GUI Update Request
 app_time_update = False
+quest_list_update = False
 quest_complete_update = False
 
 running = True
