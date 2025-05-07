@@ -267,26 +267,18 @@ def window():
                 if quest_list:
                     if app_name in quest_list and app_name not in completed_list:
                         if app_name in app_dict:
-                            if quest_dict[app_name]["maximum"] == ">":
-                                if quest_dict[app_name]["time"] > app_dict[app_name]:
+                                if quest_dict[app_name]["maximum"] == ">":
+                                    if quest_dict[app_name]["time"] > app_dict[app_name]:
+                                        app_dict[app_name] += _d_time_speed.get()
+                                    else:
+                                        quest_complete_update = True
+                                        completed_list.append(app_name)
+                                elif quest_dict[app_name]["time"] < app_dict[app_name]:
                                     app_dict[app_name] += _d_time_speed.get()
-                                else:
-                                    quest_complete_update = True
-                                    completed_list.append(app_name)
-                            else:
-                                if quest_dict[app_name]["time"] < app_dict[app_name]:
-                                    app_dict[app_name] += _d_time_speed.get()
-                                else:
-                                    pass
                         else:
                             app_dict[app_name] = _d_time_speed.get()
-                    else:
-                        pass
-                    
                     app_time_update = True
                     sleep(1)
-                else:
-                    pass
 
     def ui_update(): #this is the while true loop
         global app_dict, app_time_update, quest_complete_update, total_points
@@ -326,7 +318,7 @@ def window():
     cursor = conn.cursor()
     setup_sql(conn, cursor)
 
-    global _d_ignore_quest, _d_time_speed, temp_quest_app, temp_quest_time, temp_quest_tab, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points, tab_list, debug_menu
+    global _d_time_speed, temp_quest_app, temp_quest_time, temp_quest_tab, app_dict, app_time_update, update_tick, running, maximum_map, time_map, quest_dict, quest_complete_update, total_points, tab_list, debug_menu
     
     #App Info
     window = ctk.CTk()
@@ -353,7 +345,6 @@ def window():
     #Debug Menu Var
     debug_menu = None
     _d_time_speed = ctk.IntVar(value=1)
-    _d_ignore_quest = ctk.BooleanVar(value=False)
 
     #GUI Update Request
     app_time_update = False
@@ -435,35 +426,20 @@ class DebugMenu(ctk.CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self.close_debug_menu) # Handle window closing
     
     def setup_menu(self):
-        global _d_time_speed, _d_ignore_quest
+        global _d_time_speed
         
         self.grid_columnconfigure((0,1), weight=1)
 
         #Speed up time
         self.time_speed_label = ctk.CTkLabel(master=self, text="Speed Up")
         self.time_speed_label.grid(row=0, column=0, padx=20, pady=10, sticky='w')
-        self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text='', command=self.time_speed_check,
-                                     variable=_d_time_speed, onvalue=3600, offvalue=1, width=10)
+        self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text='', variable=_d_time_speed,
+                                                   onvalue=3600, offvalue=1, width=10)
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
-        
-        #Ignore Quest
-        self.ignore_quest_label = ctk.CTkLabel(master=self, text="Ignore Quest")
-        self.ignore_quest_label.grid(row=1, column=0, padx=20, pady=10, sticky='w')
-        self.ignore_quest_checkbox = ctk.CTkCheckBox(master=self, text='', command=self.ignore_quest_check,
-                                     variable=_d_ignore_quest, onvalue=True, offvalue=False, width=10)
-        self.ignore_quest_checkbox.grid(row=1, column=1, padx=20, pady=10, sticky='e')
         
         #Drop every table
         self.drop_table_button = ctk.CTkButton(master=self, text="Reset Database", command=self.reset_database)
-        self.drop_table_button.grid(row=2, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
-    
-    def time_speed_check(self):
-        global _d_time_speed
-        print("checkbox toggled, current value:", _d_time_speed.get())
-        
-    def ignore_quest_check(self):
-        global _d_ignore_quest
-        print("checkbox toggled, current value:", _d_ignore_quest.get())    
+        self.drop_table_button.grid(row=1, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
     
     def reset_database(self):
         window.setup_sql()
