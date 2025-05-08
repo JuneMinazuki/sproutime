@@ -123,11 +123,11 @@ class Tabview(ctk.CTkTabview):
         self.debug_button.pack(padx=20, pady=10)
 
     def create_bar(self):
-        self.tab6 = self.add("Progress Bar")
-        self.add_progress_button = ctk.CTkButton(self.tab6, text="Add", command=self.add_progress_bar)
+        self.tab7 = self.add("Progress Bar")
+        self.add_progress_button = ctk.CTkButton(self.tab7, text="Add", command=self.add_progress_bar)
         self.add_progress_button.pack(pady=10)
 
-        self.progress_frame = ctk.CTkFrame(self.tab6)
+        self.progress_frame = ctk.CTkFrame(self.tab7)
         self.progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.progress_bars = []
