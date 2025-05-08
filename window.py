@@ -45,6 +45,7 @@ class Tabview(ctk.CTkTabview):
         self.create_score_widgets()
         self.create_stats_widgets()
         self.create_setting_widgets()
+        self.create_changeappname_widgets()
         self.create_bar()
 
         self.start_updating()
@@ -121,6 +122,28 @@ class Tabview(ctk.CTkTabview):
         #Debug Button
         self.debug_button = ctk.CTkButton(master=self.tab5, text="Debug", command=self.open_debug_menu)
         self.debug_button.pack(padx=20, pady=10)
+
+    def create_changeappname_widgets(self):
+        self.tab6 = self.add("Change App Name")
+
+        self.appname_widgets = []  
+
+        # Scrollable frame for name changer
+        self.scrollable_frame = ctk.CTkScrollableFrame(self.tab6)
+        self.scrollable_frame.pack(fill="both", expand=True)
+
+        for i, app in enumerate(app_list):
+            label = ctk.CTkLabel(self.scrollable_frame, text=app)
+            label.grid(row=i, column=0, sticky="w", padx=10, pady=5)
+
+            entry = ctk.CTkEntry(self.scrollable_frame, placeholder_text="New name")
+            entry.grid(row=i, column=1, sticky="ew", padx=10, pady=5)
+
+            self.appname_widgets.append((label, entry))
+
+        # Add Change Name Button
+        save_button = ctk.CTkButton(self.scrollable_frame, text="Change", command=self.change_app_name)
+        save_button.grid(row=0, column=2, padx=10, pady=5)
 
     def create_bar(self):
         self.tab7 = self.add("Progress Bar")
