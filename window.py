@@ -76,10 +76,10 @@ class Tabview(ctk.CTkTabview):
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
         self.tabBox = ctk.CTkComboBox(self.tab2, values=tab_list, command=self.tabBox_callback)
-        self.tabBox.grid(row=0, column=2)
+        self.tabBox.grid(row=0, column=1)
         self.tabBox.set(tab_list[0])
-        self.tabBox.grid_remove()
-            
+        self.check_for_chrome()    
+        
         #Refresh Button
         self.refresh_button = ctk.CTkButton(self.tab2, text="Refresh", command=self.refresh_app_list)
         self.refresh_button.grid(row=1, column=0, padx=10, pady=20, sticky='w')
@@ -270,7 +270,12 @@ class Tabview(ctk.CTkTabview):
     def combobox_callback(self, choice):  
         global temp_quest_app
         temp_quest_app = choice
-        if choice == google:
+        self.check_for_chrome()
+            
+    def check_for_chrome(self): 
+        global temp_quest_app
+         
+        if temp_quest_app == google:
             self.tabBox.grid()
         else:
             self.tabBox.grid_remove()
