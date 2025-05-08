@@ -45,6 +45,7 @@ class Tabview(ctk.CTkTabview):
         self.create_score_widgets()
         self.create_stats_widgets()
         self.create_setting_widgets()
+        self.create_changeappname_widgets()
 
         self.start_updating()
 
@@ -120,15 +121,40 @@ class Tabview(ctk.CTkTabview):
         #Debug Button
         self.debug_button = ctk.CTkButton(master=self.tab5, text="Debug", command=self.open_debug_menu)
         self.debug_button.pack(padx=20, pady=10)
+    
+    def create_changeappname_widgets(self):
+        self.tab6 = self.add("Change App Name")
+
+        # Scrollable frame for name changer
+        self.scrollable_frame = ctk.CTkScrollableFrame(self.tab6)
+        self.scrollable_frame.pack(fill="both", expand=True)
+
+        self.appname_widgets = []  
+
+        for i, app in enumerate(app_list):
+            label = ctk.CTkLabel(self.scrollable_frame, text=app)
+            label.grid(row=i, column=0, sticky="w", padx=10, pady=5)
+
+            entry = ctk.CTkEntry(self.scrollable_frame, placeholder_text="New name")
+            entry.grid(row=i, column=1, sticky="ew", padx=10, pady=5)
+
+            self.appname_widgets.append((label, entry))
+
+        # Add Change Name Button
+        save_button = ctk.CTkButton(self.scrollable_frame, text="Change", command=self.change_app_name)
+        save_button.grid(row=0, column=2, padx=10, pady=5)
 
     def update_progress(self):
-        global running, app_time_update, app_dict, update_tick
+        global running, app_time_update, app_dict, update_tick, appname_dict
         
         while running:
             if app_time_update:
                 self.app_list_TB.delete("0.0", "end")
                 for app in app_dict:
-                    self.app_list_TB.insert("end", f'{app}: {app_dict[app]} seconds\n')
+                    if appname_dict and app in self.old_name_list:
+                        self.app_list_TB.insert("end", f'{appname_dict[app]}: {app_dict[app]} seconds\n')
+                    else:
+                        self.app_list_TB.insert("end", f'{app}: {app_dict[app]} seconds\n')
                 
                 app_time_update = False
                 
@@ -304,6 +330,18 @@ class Tabview(ctk.CTkTabview):
                 conn.close()
 
         quest_list_update = True
+
+    def change_app_name(self):
+        global appname_dict
+
+        self.old_name_list = []
+
+        for label, entry in self.appname_widgets:
+            new_name = entry.get().strip()
+            if new_name: 
+                original_name = label.cget("text")
+                appname_dict[original_name] = new_name
+                self.old_name_list.append(original_name)
         
     def open_debug_menu(self):
         global debug_menu
@@ -758,6 +796,8 @@ google = "Google Chrome"
 
 if sys.platform == "win32":
     google = "Chrome"
+
+appname_dict = {} # used in name changer
 
 #Debug Menu Var
 debug_menu = None
