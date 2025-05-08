@@ -42,7 +42,7 @@ def setup_tab1(tab, tabview):
     button_tab1.pack(padx=20, pady=20)
 
     # Add a close button with sys.exit()
-    button_close = customtkinter.CTkButton(tab, text="Close", command=on_closing)
+    button_close = customtkinter.CTkButton(tab, text="Close", command=sys.exit)
     button_close.pack(padx=20, pady=20)
     
 
@@ -113,9 +113,5 @@ setup_tab3(tabview.tab("Tab 3"))
 
 
 
-# when user close the program
-def on_closing():
-    exit()
-window.protocol("WM_DELETE_WINDOW", on_closing) #check for if user close the program
 
 window.mainloop()
