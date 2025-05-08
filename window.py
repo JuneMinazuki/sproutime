@@ -45,6 +45,7 @@ class Tabview(ctk.CTkTabview):
         self.create_score_widgets()
         self.create_stats_widgets()
         self.create_setting_widgets()
+        self.create_bar()
 
         self.start_updating()
 
@@ -120,6 +121,51 @@ class Tabview(ctk.CTkTabview):
         #Debug Button
         self.debug_button = ctk.CTkButton(master=self.tab5, text="Debug", command=self.open_debug_menu)
         self.debug_button.pack(padx=20, pady=10)
+
+    def create_bar(self):
+        self.tab6 = self.add("Progress Bar")
+        self.add_progress_button = ctk.CTkButton(self.tab6, text="Add", command=self.add_progress_bar)
+        self.add_progress_button.pack(pady=10)
+
+        self.progress_frame = ctk.CTkFrame(self.tab6)
+        self.progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        self.progress_bars = []
+        
+
+    def add_progress_bar(self):
+        # Frame for each progress bar
+        bar_frame = ctk.CTkFrame(self.progress_frame)
+        bar_frame.pack(fill="x", pady=5)
+
+        # Editable text above progress bar
+        text_entry = ctk.CTkEntry(bar_frame, placeholder_text="Enter text here")
+        text_entry.pack(anchor="w", fill="x", padx=5, pady=2)
+
+        # Progress bar
+        progress_bar = ctk.CTkProgressBar(bar_frame)
+        progress_bar.set(0.1)  # Set initial progress to 10%
+        progress_bar.pack(fill="x", padx=5, pady=5)
+
+        # Increase progress button
+        increase_button = ctk.CTkButton(bar_frame, text="Increase", width=80, command=lambda: self.increase_progress(progress_bar))
+        increase_button.pack(pady=5)
+
+        # Delete button
+        delete_button = ctk.CTkButton(bar_frame, text="Delete", width=80, command=lambda: self.delete_progress_bar(bar_frame))
+        delete_button.pack(pady=5)
+
+        self.progress_bars.append(bar_frame)
+
+    def increase_progress(self, progress_bar):
+        current_value = progress_bar.get()
+        new_value = min(current_value + 0.1, 1.0)  # initial progress to 10%, max is 100%
+        progress_bar.set(new_value)
+
+    def delete_progress_bar(self, bar_frame):
+        bar_frame.destroy()
+        self.progress_bars.remove(bar_frame)
+
 
     def update_progress(self):
         global running, app_time_update, app_dict, update_tick
