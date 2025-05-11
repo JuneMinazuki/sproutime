@@ -669,6 +669,8 @@ def get_active_tab_name():
                 tabName = "Instagram"
             case "www.facebook.com":
                 tabName = "Facebook"
+            case "www.linkedin.com":
+                tabName = "LinkedIn"
             case _:
                 tabName = "Google Chrome"
 
@@ -865,7 +867,7 @@ running = True
 time = [">1 hour", ">2 hours", '>3 hours', '<1 hours', '<2 hours']
 temp_quest_time = time[0]
 app_list = get_all_app_list()
-tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook"]
+tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook", "LinkedIn"]
 theme_options = ["Light", "Dark", "System"]
 temp_quest_app = app_list[0]
 temp_quest_tab = tab_list[0]
