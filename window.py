@@ -224,7 +224,10 @@ class Tabview(ctk.CTkTabview):
                     for quest in quests:
                         maximum = ">" if quest[1] == 1 else "<"
 
-                        self.quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{quest[2] / 60} hour\n')
+                        if appname_dict and quest[0] in self.old_name_list:
+                            self.quest_list_TB.insert("0.0", f'{appname_dict[quest[0]]} : {maximum}{quest[2] / 60} hour\n')
+                        else:
+                            self.quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{quest[2] / 60} hour\n')
                         
                         quest_list.append(quest[0])
                         quest_dict[quest[0]] = {"maximum": maximum, "time": quest[2] * 60}
@@ -254,7 +257,10 @@ class Tabview(ctk.CTkTabview):
                     for quest in quests:
                         maximum = ">" if quest[2] == 1 else "<"
                         
-                        self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
+                        if appname_dict and quest[0] in self.old_name_list:
+                            self.completed_list_TB.insert("end", f'{appname_dict[quest[0]]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
+                        else:
+                            self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An error occurred: {e}")
                     conn.rollback()
