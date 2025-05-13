@@ -102,7 +102,7 @@ class Tabview(ctk.CTkTabview):
         self.appname_widgets = []  
 
         self.scrollable_frame = ctk.CTkScrollableFrame(self.tab2)
-        self.scrollable_frame.grid(row=3, column=0, sticky="nsew", columnspan=2)
+        self.scrollable_frame.grid(row=3, column=0, sticky="nsew")
 
         for i, app in enumerate(app_list):
             label = ctk.CTkLabel(self.scrollable_frame, text=app)
@@ -114,8 +114,8 @@ class Tabview(ctk.CTkTabview):
             self.appname_widgets.append((label, entry))
 
         # Add Change Name Button
-        save_button = ctk.CTkButton(self.scrollable_frame, text="Change", command=self.change_app_name)
-        save_button.grid(row=0, column=2, padx=10, pady=5)
+        save_button = ctk.CTkButton(self.tab2, text="Change", command=self.change_app_name)
+        save_button.grid(row=4, column=0)
 
     def create_score_widgets(self):
         self.tab3 = self.add("Score")
@@ -187,13 +187,13 @@ class Tabview(ctk.CTkTabview):
         self.progress_bars.remove(bar_frame)
 
     def update_progress(self):
-        global running, app_time_update, app_dict, update_tick, appname_dict
+        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list
         
         while running:
             if app_time_update:
                 self.app_list_TB.delete("0.0", "end")
                 for app in app_dict:
-                    if appname_dict and app in self.old_name_list:
+                    if appname_dict and app in old_name_list:
                         self.app_list_TB.insert("end", f'{appname_dict[app]}: {app_dict[app]} seconds\n')
                     else:
                         self.app_list_TB.insert("end", f'{app}: {app_dict[app]} seconds\n')
@@ -203,7 +203,7 @@ class Tabview(ctk.CTkTabview):
             sleep(update_tick)
 
     def update_quest(self):
-        global running, quest_list_update, quest_dict, quest_list, update_tick
+        global running, quest_list_update, quest_dict, quest_list, update_tick, old_name_list
         
         while running:
             if quest_list_update:
@@ -220,7 +220,7 @@ class Tabview(ctk.CTkTabview):
                     for quest in quests:
                         maximum = ">" if quest[1] == 1 else "<"
 
-                        if appname_dict and quest[0] in self.old_name_list:
+                        if appname_dict and quest[0] in old_name_list:
                             self.quest_list_TB.insert("0.0", f'{appname_dict[quest[0]]} : {maximum}{quest[2] / 60} hour\n')
                         else:
                             self.quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{quest[2] / 60} hour\n')
@@ -238,7 +238,7 @@ class Tabview(ctk.CTkTabview):
             sleep(update_tick)
             
     def update_score(self):
-        global running, quest_complete_update, update_tick
+        global running, quest_complete_update, update_tick, old_name_list
         
         while running:
             if quest_complete_update:
@@ -253,7 +253,7 @@ class Tabview(ctk.CTkTabview):
                     for quest in quests:
                         maximum = ">" if quest[2] == 1 else "<"
                         
-                        if appname_dict and quest[0] in self.old_name_list:
+                        if appname_dict and quest[0] in old_name_list:
                             self.completed_list_TB.insert("end", f'{appname_dict[quest[0]]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
                         else:
                             self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
@@ -337,7 +337,22 @@ class Tabview(ctk.CTkTabview):
         temp_quest_time = choice
 
     def refresh_app_list(self):
-        self.app_dropdown.configure(values=get_all_app_list())
+        app_list = get_all_app_list()
+        self.app_dropdown.configure(values=app_list)
+
+        self.appname_widgets = []
+
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+
+        for i, app in enumerate(app_list):
+            label = ctk.CTkLabel(self.scrollable_frame, text=app)
+            label.grid(row=i, column=0, padx=10, pady=5)
+
+            entry = ctk.CTkEntry(self.scrollable_frame, placeholder_text="New name")
+            entry.grid(row=i, column=1, padx=10, pady=5)
+
+            self.appname_widgets.append((label, entry))
 
     def delete_quest(self):
         global temp_quest_app, quest_list_update
@@ -385,19 +400,29 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
 
     def change_app_name(self):
-        global appname_dict
+        global appname_dict, old_name_list, quest_list_update
 
-        self.old_name_list = []
-
+        conn = sqlite3.connect("sproutime.db")
+        cursor = conn.cursor()
+        
         for label, entry in self.appname_widgets:
             new_name = entry.get().strip()
             if new_name: 
                 original_name = label.cget("text")
                 appname_dict[original_name] = new_name
-                self.old_name_list.append(original_name)
+                old_name_list.append(original_name)
+                cursor.execute("SELECT * FROM new_app_name WHERE old_name = ?", (original_name,))
+                row = cursor.fetchone()
+                if row:
+                    cursor.execute("DELETE FROM new_app_name WHERE old_name = ?", (original_name,))
+                    conn.commit()
+                cursor.execute("INSERT INTO new_app_name (old_name, new_name) VALUES (?, ?)", (original_name, new_name))
+            entry.delete(0, 'end')
 
-        conn = sqlite3.connect("sproutime.db")
-        cursor = conn.cursor()
+        conn.commit()
+        conn.close()
+
+        quest_list_update = True
         
     def open_debug_menu(self):
         global debug_menu
@@ -519,7 +544,7 @@ class DebugMenu(ctk.CTkToplevel):
                 conn.close()
             
     def reset_database(self):
-        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, total_points
+        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, total_points, appname_dict, old_name_list
         
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
@@ -549,6 +574,9 @@ class DebugMenu(ctk.CTkToplevel):
         completed_list = []
         failed_list = []
         total_points = 0
+
+        appname_dict = {}
+        old_name_list = []
         
         setup_sql()
         app_time_update = True
@@ -728,7 +756,7 @@ def quest_done_noti(app_name):
         noti.show()
 
 def load_past_data():
-    global app_time_update, app_dict, completed_list, failed_list, total_points
+    global app_time_update, app_dict, completed_list, failed_list, total_points, appname_dict, old_name_list
     
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
@@ -754,6 +782,14 @@ def load_past_data():
         
         if score and score[0] is not None:
             total_points = score[0]
+
+        #Updated new names
+        cursor.execute("SELECT * FROM new_app_name")
+
+        for col in cursor:
+            old_name_list.append(col[1])
+            appname_dict[col[1]] = col[2]
+
 
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
@@ -923,7 +959,9 @@ google = "Google Chrome"
 if sys.platform == "win32":
     google = "Chrome"
 
-appname_dict = {} # used in name changer
+ # Used in name changer
+appname_dict = {}
+old_name_list = []
 
 #Debug Menu Var
 debug_menu = None
