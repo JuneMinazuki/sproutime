@@ -101,7 +101,7 @@ class Tabview(ctk.CTkTabview):
         # Scrollable frame for name changer
         self.appname_widgets = []  
 
-        self.scrollable_frame = ctk.CTkScrollableFrame(self.tab2)
+        self.scrollable_frame = ctk.CTkScrollableFrame(self.quest_tab)
         self.scrollable_frame.grid(row=3, column=0, sticky="nsew")
 
         for i, app in enumerate(app_list):
@@ -114,7 +114,7 @@ class Tabview(ctk.CTkTabview):
             self.appname_widgets.append((label, entry))
 
         # Add Change Name Button
-        save_button = ctk.CTkButton(self.tab2, text="Change", command=self.change_app_name)
+        save_button = ctk.CTkButton(self.quest_tab, text="Change", command=self.change_app_name)
         save_button.grid(row=4, column=0)
 
     def create_score_widgets(self):
