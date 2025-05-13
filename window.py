@@ -40,6 +40,7 @@ class Tabview(ctk.CTkTabview):
         self.score_thread = None
         self.stats_thread = None
 
+        #Create widget
         self.create_progress_widgets()
         self.create_quest_widgets()
         self.create_score_widgets()
@@ -184,7 +185,6 @@ class Tabview(ctk.CTkTabview):
     def delete_progress_bar(self, bar_frame):
         bar_frame.destroy()
         self.progress_bars.remove(bar_frame)
-
 
     def update_progress(self):
         global running, app_time_update, app_dict, update_tick, appname_dict
@@ -519,7 +519,7 @@ class DebugMenu(ctk.CTkToplevel):
                 conn.close()
             
     def reset_database(self):
-        global app_time_update, quest_complete_update, quest_list_update
+        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, total_points
         
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
@@ -542,6 +542,13 @@ class DebugMenu(ctk.CTkToplevel):
         finally:
             if conn:
                 conn.close()
+        
+        app_dict = {}
+        quest_list = []
+        quest_dict = {}
+        completed_list = []
+        failed_list = []
+        total_points = 0
         
         setup_sql()
         app_time_update = True
@@ -591,7 +598,7 @@ def setup_sql():
             CREATE TABLE IF NOT EXISTS streak (
                 date TEXT PRIMARY KEY, --Store as YYYY-MM-DD
                 quest_completed INTEGER NOT NULL,
-                quest_Set INTEGER NOT NULL
+                quest_set INTEGER NOT NULL
             );
         ''')
 
@@ -721,7 +728,7 @@ def quest_done_noti(app_name):
         noti.show()
 
 def load_past_data():
-    global app_time_update, app_dict, completed_list, failed_list
+    global app_time_update, app_dict, completed_list, failed_list, total_points
     
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
@@ -736,10 +743,18 @@ def load_past_data():
             
         #Completed quest
         cursor.execute("SELECT app_name FROM quest_completion WHERE date = ?", (str(date.today()),))
-        apps = cursor.fetchall()
+        quests = cursor.fetchall()
         
-        for app in apps:
-            completed_list.append(app[0])
+        for quest in quests:
+            completed_list.append(quest[0])
+            
+        #Total Score
+        cursor.execute("SELECT SUM(score_earn) FROM quest_completion")
+        score = cursor.fetchone()
+        
+        if score and score[0] is not None:
+            total_points = score[0]
+
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
@@ -796,25 +811,69 @@ def update_time():
                     quest_done_noti(app_name)
                     total_points += task_score
                             
+                #Failed Quest      
                 elif quest_dict[app_name]["maximum"] == "<":
                     failed_list.append(app_name)
+                    completed_list.remove(app_name)
+                    
+                    conn = sqlite3.connect('sproutime.db')
+                    cursor = conn.cursor()
+                    
+                    try:
+                        cursor.execute("DELETE FROM quest_completion WHERE app_name = ?", (app_name,))
+                        conn.commit()
+                    except sqlite3.Error as e:
+                        if DEBUG: print(f"An error occurred: {e}")
+                        conn.rollback()
+                    finally:
+                        if conn:
+                            conn.close()
+                    
+                    total_points -= task_score
+                    
                 quest_complete_update = True
 
             app_time_update = True
             sleep(1)
     
 def update_log(today):
-    global app_dict
+    global app_dict, completed_list, quest_list, failed_list, task_score
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
     try:
+        #App Time
         for app in app_dict:
             cursor.execute("SELECT COUNT(*) FROM app_time WHERE app_name = ? AND date = ?", (app, today))
             if cursor.fetchone()[0] > 0:
                 cursor.execute("UPDATE app_time SET duration = ? WHERE app_name = ?", (app_dict[app], app))
             else:
                 cursor.execute("INSERT INTO app_time (app_name, date, duration) VALUES (?, ?, ?)", (app, today, app_dict[app]))
+        
+        #Quest Completed For "<" Quest
+        if (quest_list):
+            cursor.execute("SELECT time, app_name FROM quest WHERE maximum = 0")
+            quests = cursor.fetchall()
+            
+            for quest in quests:
+                quest_time = quest[0]
+                app_name = quest[1]
+                
+                if (app_name in quest_list) and (app_name not in failed_list):
+                    cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, 0, ?)", (today, app_name, quest_time, task_score))
+                elif (app_name in failed_list):
+                    cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app, today))
+
+        #Streak
+        cursor.execute("SELECT COUNT(*) FROM quest")
+        quest_set = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM streak WHERE date = ?", (today,))
+        if cursor.fetchone()[0] > 0:
+            cursor.execute("UPDATE streak SET quest_completed = ?, quest_set = ? WHERE date = ?", (len(completed_list), quest_set, today))
+        else:
+            cursor.execute("INSERT INTO streak (date, quest_completed, quest_set) VALUES (?, ?, ?)", (today, len(completed_list), quest_set))
+        
         conn.commit()
         app_dict = {}
     except sqlite3.Error as e:
