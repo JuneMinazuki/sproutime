@@ -203,7 +203,6 @@ class Tabview(ctk.CTkTabview):
                         self.app_list_TB.insert("end", f'{app}: {app_dict[app]} seconds\n')
                 
                 app_time_update = False
-                
             sleep(update_tick)
 
     def update_quest(self):
@@ -237,8 +236,8 @@ class Tabview(ctk.CTkTabview):
                 finally:
                     if conn:
                         conn.close()
+                        
                 quest_list_update = False
-
             sleep(update_tick)
             
     def update_score(self):
@@ -272,12 +271,17 @@ class Tabview(ctk.CTkTabview):
             sleep(update_tick)
 
     def update_stats(self): 
-        global running, update_tick
+        global running, update_tick, stat_update
                
         while running:
+            if stat_update:
+                
+                stat_update = False
             sleep(update_tick)
             
     def start_updating(self):
+        global stat_update
+        
         tab = self.get()
         self.progress_active = tab == "Progress"
         self.quest_active = tab == "Quest"
@@ -312,6 +316,7 @@ class Tabview(ctk.CTkTabview):
         if self.stats_active and (self.stats_thread is None or not self.stats_thread.is_alive()):
             self.stats_thread = threading.Thread(target=self.update_progress, daemon=True)
             self.stats_thread.start()
+            stat_update = True
         elif not self.stats_active and self.stats_thread and self.stats_thread.is_alive():
             # The thread will naturally pause in its while loop
             pass
@@ -920,8 +925,8 @@ debug_menu = None
 _d_time_speed = ctk.IntVar(value=1)
 
 #GUI Update Request
-app_time_update = False
-quest_list_update = False
+app_time_update = True
+quest_list_update = True
 quest_complete_update = True
 stat_update = True
 
