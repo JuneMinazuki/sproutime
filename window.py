@@ -403,7 +403,7 @@ class Tabview(ctk.CTkTabview):
     def open_debug_menu(self):
         global debug_menu
     
-        if debug_menu is None or debug_menu.winfo_exists():
+        if debug_menu is None or not debug_menu.winfo_exists():
             debug_menu = DebugMenu(self)  # Pass the main window as parent
         else:
             debug_menu.focus()
@@ -557,8 +557,6 @@ class DebugMenu(ctk.CTkToplevel):
         quest_complete_update = True
         
     def close_debug_menu(self):
-        global debug_menu
-        debug_menu = None
         self.destroy() 
     
 def setup_sql():   
@@ -925,6 +923,7 @@ _d_time_speed = ctk.IntVar(value=1)
 app_time_update = False
 quest_list_update = False
 quest_complete_update = True
+stat_update = True
 
 #First load
 running = True
