@@ -803,7 +803,7 @@ def update_time():
             sleep(1)
     
 def update_log(today):
-    global app_dict, completed_list, quest_list, failed_list
+    global app_dict, completed_list, quest_list, failed_list, task_score
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
@@ -816,9 +816,20 @@ def update_log(today):
             else:
                 cursor.execute("INSERT INTO app_time (app_name, date, duration) VALUES (?, ?, ?)", (app, today, app_dict[app]))
         
-        #Quest Completed
-        if 
-        
+        #Quest Completed For "<" Quest
+        if (quest_list):
+            cursor.execute("SELECT time, app_name FROM quest WHERE maximum = 0")
+            quests = cursor.fetchall()
+            
+            for quest in quests:
+                quest_time = quest[0]
+                app_name = quest[1]
+                
+                if (app_name in quest_list) and (app_name not in failed_list):
+                    cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, 0, ?)", (today, app_name, quest_time, task_score))
+                elif (app_name in failed_list):
+                    cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app, today))
+
         #Streak
         cursor.execute("SELECT COUNT(*) FROM quest")
         quest_set = cursor.fetchone()[0]
