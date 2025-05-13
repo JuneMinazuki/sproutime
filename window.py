@@ -735,10 +735,11 @@ def load_past_data():
             
         #Completed quest
         cursor.execute("SELECT app_name FROM quest_completion WHERE date = ?", (str(date.today()),))
-        apps = cursor.fetchall()
+        quests = cursor.fetchall()
         
-        for app in apps:
-            completed_list.append(app[0])
+        for quest in quests:
+            completed_list.append(quest[0])
+        
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
@@ -795,8 +796,26 @@ def update_time():
                     quest_done_noti(app_name)
                     total_points += task_score
                             
+                #Failed Quest      
                 elif quest_dict[app_name]["maximum"] == "<":
                     failed_list.append(app_name)
+                    completed_list.remove(app_name)
+                    
+                    conn = sqlite3.connect('sproutime.db')
+                    cursor = conn.cursor()
+                    
+                    try:
+                        cursor.execute("DELETE FROM quest_completion WHERE app_name = ?", (app_name,))
+                        conn.commit()
+                    except sqlite3.Error as e:
+                        if DEBUG: print(f"An error occurred: {e}")
+                        conn.rollback()
+                    finally:
+                        if conn:
+                            conn.close()
+                    
+                    total_points -= task_score
+                    
                 quest_complete_update = True
 
             app_time_update = True
