@@ -39,6 +39,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_thread = None
         self.score_thread = None
         self.stats_thread = None
+        self.bar_thread = None
 
         self.create_progress_widgets()
         self.create_quest_widgets()
@@ -161,16 +162,19 @@ class Tabview(ctk.CTkTabview):
         bar_frame = ctk.CTkFrame(self.progress_frame)
         bar_frame.pack(fill="x", pady=5)
 
-        # Editable text above progress bar
-        text_entry = ctk.CTkEntry(bar_frame, placeholder_text="Enter text here")
-        text_entry.pack(anchor="w", fill="x", padx=5, pady=2)
+        # text above progress bar
+        text_label = ctk.CTkLabel(bar_frame, text="Progress Bar")
+        text_label.pack(pady=5)
 
         # Progress bar
         progress_bar = ctk.CTkProgressBar(bar_frame)
-        progress_bar.set(0.1)  # Set initial progress to 10%
+        progress_bar.set(0)  # Set initial progress to 0%
         progress_bar.pack(fill="x", padx=5, pady=5)
 
-        # Increase progress button
+        # If there are quests, add a dropdown to select quest
+        if quest_list:
+            quest_dropdown = ctk.CTkComboBox(bar_frame, values=quest_list)
+            quest_dropdown.pack(pady=5)
         increase_button = ctk.CTkButton(bar_frame, text="Increase", width=80, command=lambda: self.increase_progress(progress_bar))
         increase_button.pack(pady=5)
 
@@ -179,6 +183,7 @@ class Tabview(ctk.CTkTabview):
         delete_button.pack(pady=5)
 
         self.progress_bars.append(bar_frame)
+        
 
     def increase_progress(self, progress_bar):
         current_value = progress_bar.get()
@@ -188,6 +193,29 @@ class Tabview(ctk.CTkTabview):
     def delete_progress_bar(self, bar_frame):
         bar_frame.destroy()
         self.progress_bars.remove(bar_frame)
+
+    def update_progress_bar(self,bar_frame):
+        global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update
+        max_map = {'>': 1, '<': 0}
+        time_map = {'1 hour': 60, '2 hours': 120, '3 hours': 180}
+        upper_limit = max_map.get(temp_quest_time[0])
+        minutes = time_map.get(temp_quest_time[1:])
+        name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
+        
+        bar_frame.text_label.configure(text=name) # config text label
+        bar_frame.progress_bar.set(minutes / 180) # set progress bar to 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
+        bar_frame.current_value = bar_frame.progress_bar.get()
+        # update progress bar with the quest time and maximum is upper_limit
+        
+
+        
+        
+        
+                    
+                    
+  
+
+    
 
 
     def update_progress(self):
@@ -283,6 +311,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_active = tab == "Quest"
         self.score_active = tab == "Score"
         self.stats_active = tab == "Stats"
+        self.bar_active = tab == "Progress Bar"
 
         #Progess Tab
         if self.progress_active and (self.progress_thread is None or not self.progress_thread.is_alive()):
@@ -315,6 +344,15 @@ class Tabview(ctk.CTkTabview):
         elif not self.stats_active and self.stats_thread and self.stats_thread.is_alive():
             # The thread will naturally pause in its while loop
             pass
+
+        #Bar Tab
+        if self.bar_active and (self.bar_thread is None or not self.bar_thread.is_alive()):
+            self.bar_thread = threading.Thread(target=self.update_progress_bar, daemon=True)
+            self.bar_thread.start()
+        elif not self.bar_active and self.bar_thread and self.bar_thread.is_alive():
+            # The thread will naturally pause in its while loop
+            pass
+            
 
     def tab_changed(self):
         self.start_updating()
