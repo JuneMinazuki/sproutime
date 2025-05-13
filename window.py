@@ -720,7 +720,7 @@ def quest_done_noti(app_name):
         noti.show()
 
 def load_past_data():
-    global app_time_update, app_dict, completed_list, failed_list
+    global app_time_update, app_dict, completed_list, failed_list, total_points
     
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
@@ -739,7 +739,14 @@ def load_past_data():
         
         for quest in quests:
             completed_list.append(quest[0])
+            
+        #Total Score
+        cursor.execute("SELECT SUM(score_earn) FROM quest_completion")
+        score = cursor.fetchone()
         
+        if score and score[0] is not None:
+            total_points = score[0]
+
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
