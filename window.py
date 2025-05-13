@@ -47,90 +47,112 @@ class Tabview(ctk.CTkTabview):
         self.create_stats_widgets()
         self.create_setting_widgets()
         self.create_changeappname_widgets()
-        self.create_bar()
+        self.create_bar_widgets()
 
         self.start_updating()
 
     def create_progress_widgets(self):
-        self.tab1 = self.add("Progress")
+        self.progress_tab = self.add("Progress")
 
         #Textbox
-        self.app_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
+        self.app_list_TB = ctk.CTkTextbox(self.progress_tab, width=1080, height=180)
         self.app_list_TB.grid(row=0, column=0, columnspan=4)
 
         for col in range(3):
-            self.tab1.columnconfigure(col, weight=1)
+            self.progress_tab.columnconfigure(col, weight=1)
 
         for row in range(5):
-            self.tab1.rowconfigure(row, weight=1)
+            self.progress_tab.rowconfigure(row, weight=1)
 
     def create_quest_widgets(self):
         global quest_list_update
-        self.tab2 = self.add("Quest")
+        self.quest_tab = self.add("Quest")
 
         #App Option
-        self.app_dropdown = ctk.CTkComboBox(self.tab2,values=app_list, command=self.combobox_callback)
+        self.app_dropdown = ctk.CTkComboBox(self.quest_tab,values=app_list, command=self.combobox_callback)
         self.app_dropdown.grid(row=0, column=0, padx=10, pady=20, sticky='w')
 
         #Time Option
-        self.time_dropdown = ctk.CTkComboBox(self.tab2,values=time, command=self.timebox_callback)
+        self.time_dropdown = ctk.CTkComboBox(self.quest_tab,values=time, command=self.timebox_callback)
         self.time_dropdown.grid(row=0, column=2, padx=10, pady=20, sticky='e')
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
-        self.tabBox = ctk.CTkComboBox(self.tab2, values=tab_list, command=self.tabBox_callback)
+        self.tabBox = ctk.CTkComboBox(self.quest_tab, values=tab_list, command=self.tabBox_callback)
         self.tabBox.grid(row=0, column=1)
         self.tabBox.set(tab_list[0])
         self.check_for_chrome()    
         
         #Refresh Button
-        self.refresh_button = ctk.CTkButton(self.tab2, text="Refresh", command=self.refresh_app_list)
+        self.refresh_button = ctk.CTkButton(self.quest_tab, text="Refresh", command=self.refresh_app_list)
         self.refresh_button.grid(row=1, column=0, padx=10, pady=20, sticky='w')
         
         #Delete Button
-        self.delete_button = ctk.CTkButton(self.tab2, text="Delete", command=self.delete_quest)
+        self.delete_button = ctk.CTkButton(self.quest_tab, text="Delete", command=self.delete_quest)
         self.delete_button.grid(row=1, column=1, padx=10, pady=20, sticky="e")
 
         #Save Button
-        self.save_button = ctk.CTkButton(self.tab2, text="Save", command=self.save_quest_time)
+        self.save_button = ctk.CTkButton(self.quest_tab, text="Save", command=self.save_quest_time)
         self.save_button.grid(row=1, column=2, padx=10, pady=20, sticky='e')
 
         #Quest Saved Textbox
-        self.quest_list_TB = ctk.CTkTextbox(self.tab2, width=1080, height=180)
+        self.quest_list_TB = ctk.CTkTextbox(self.quest_tab, width=1080, height=180)
         self.quest_list_TB.grid(row=2, column=0, padx=10, pady=20, columnspan = 3)
         quest_list_update = True
 
     def create_score_widgets(self):
-        self.tab3 = self.add("Score")
+        self.score_tab = self.add("Score")
 
         #Completed Quests Textbox
-        self.completed_list_TB = ctk.CTkTextbox(self.tab3, width=1080, height=180)
+        self.completed_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
         self.completed_list_TB.grid(row=0, column=0, columnspan=3)
 
         for col in range(1):
-            self.tab3.columnconfigure(col, weight=1)
+            self.score_tab.columnconfigure(col, weight=1)
         
     def create_stats_widgets(self):
-        self.tab4 = self.add("Stats")
+        self.stat_tab = self.add("Stats")
+        for col in range(5):
+            self.stat_tab.columnconfigure(col, weight=1)
+        
+        #Time Spend for Each App
+        self.time_spend_TB = ctk.CTkTextbox(self.stat_tab, width=540, height=180)
+        self.time_spend_TB.grid(row=0, column=1, padx=10, pady=20)
+        
+        #Total Time Spend
+        self.total_time_spend_TB = ctk.CTkTextbox(self.stat_tab, width=540, height=180)
+        self.total_time_spend_TB.grid(row=0, column=3, padx=10, pady=20)
 
+        #Total task complete since install
+        self.task_complete_TB = ctk.CTkTextbox(self.stat_tab, width=540, height=180)
+        self.task_complete_TB.grid(row=1, column=1, padx=10, pady=20)
+        
+        #% of task finished
+        self.task_percentage_TB = ctk.CTkTextbox(self.stat_tab, width=540, height=180)
+        self.task_percentage_TB.grid(row=1, column=3, padx=10, pady=20)
+        
+        #Longest streak
+        self.longest_streak_TB = ctk.CTkTextbox(self.stat_tab, width=540, height=180)
+        self.longest_streak_TB.grid(row=2, column=1, columnspan=3, padx=10, pady=20)
+        
     def create_setting_widgets(self):
-        self.tab5 = self.add("Settings")
+        self.setting_tab = self.add("Settings")
         
         #Theme
-        self.theme_selector = ctk.CTkOptionMenu(master=self.tab5, values=theme_options, command=lambda theme: ctk.set_appearance_mode(theme))  # Change theme
+        self.theme_selector = ctk.CTkOptionMenu(master=self.setting_tab, values=theme_options, command=lambda theme: ctk.set_appearance_mode(theme))  # Change theme
         self.theme_selector.pack(padx=20, pady=10)
         self.theme_selector.set("System")  # Set default theme to "System"
         
         #Debug Button
-        self.debug_button = ctk.CTkButton(master=self.tab5, text="Debug", command=self.open_debug_menu)
+        self.debug_button = ctk.CTkButton(master=self.setting_tab, text="Debug", command=self.open_debug_menu)
         self.debug_button.pack(padx=20, pady=10)
 
     def create_changeappname_widgets(self):
-        self.tab6 = self.add("Change App Name")
+        self.changeappname_tab = self.add("Change App Name")
 
         self.appname_widgets = []  
 
         # Scrollable frame for name changer
-        self.scrollable_frame = ctk.CTkScrollableFrame(self.tab6)
+        self.scrollable_frame = ctk.CTkScrollableFrame(self.changeappname_tab)
         self.scrollable_frame.pack(fill="both", expand=True)
 
         for i, app in enumerate(app_list):
@@ -146,12 +168,12 @@ class Tabview(ctk.CTkTabview):
         save_button = ctk.CTkButton(self.scrollable_frame, text="Change", command=self.change_app_name)
         save_button.grid(row=0, column=2, padx=10, pady=5)
 
-    def create_bar(self):
-        self.tab7 = self.add("Progress Bar")
-        self.add_progress_button = ctk.CTkButton(self.tab7, text="Add", command=self.add_progress_bar)
+    def create_bar_widgets(self):
+        self.bar_tab = self.add("Progress Bar")
+        self.add_progress_button = ctk.CTkButton(self.bar_tab, text="Add", command=self.add_progress_bar)
         self.add_progress_button.pack(pady=10)
 
-        self.progress_frame = ctk.CTkFrame(self.tab7)
+        self.progress_frame = ctk.CTkFrame(self.bar_tab)
         self.progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.progress_bars = []
