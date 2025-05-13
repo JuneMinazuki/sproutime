@@ -45,7 +45,6 @@ class Tabview(ctk.CTkTabview):
         self.create_score_widgets()
         self.create_stats_widgets()
         self.create_setting_widgets()
-        self.create_changeappname_widgets()
         self.create_bar()
 
         self.start_updating()
@@ -98,6 +97,25 @@ class Tabview(ctk.CTkTabview):
         self.quest_list_TB.grid(row=2, column=0, padx=10, pady=20, columnspan = 3)
         quest_list_update = True
 
+        # Scrollable frame for name changer
+        self.appname_widgets = []  
+
+        self.scrollable_frame = ctk.CTkScrollableFrame(self.tab2)
+        self.scrollable_frame.grid(row=3, column=0, sticky="nsew", columnspan=2)
+
+        for i, app in enumerate(app_list):
+            label = ctk.CTkLabel(self.scrollable_frame, text=app)
+            label.grid(row=i, column=0, padx=10, pady=5)
+
+            entry = ctk.CTkEntry(self.scrollable_frame, placeholder_text="New name")
+            entry.grid(row=i, column=1, padx=10, pady=5)
+
+            self.appname_widgets.append((label, entry))
+
+        # Add Change Name Button
+        save_button = ctk.CTkButton(self.scrollable_frame, text="Change", command=self.change_app_name)
+        save_button.grid(row=0, column=2, padx=10, pady=5)
+
     def create_score_widgets(self):
         self.tab3 = self.add("Score")
 
@@ -122,28 +140,6 @@ class Tabview(ctk.CTkTabview):
         #Debug Button
         self.debug_button = ctk.CTkButton(master=self.tab5, text="Debug", command=self.open_debug_menu)
         self.debug_button.pack(padx=20, pady=10)
-
-    def create_changeappname_widgets(self):
-        self.tab6 = self.add("Change App Name")
-
-        self.appname_widgets = []  
-
-        # Scrollable frame for name changer
-        self.scrollable_frame = ctk.CTkScrollableFrame(self.tab6)
-        self.scrollable_frame.pack(fill="both", expand=True)
-
-        for i, app in enumerate(app_list):
-            label = ctk.CTkLabel(self.scrollable_frame, text=app)
-            label.grid(row=i, column=0, sticky="w", padx=10, pady=5)
-
-            entry = ctk.CTkEntry(self.scrollable_frame, placeholder_text="New name")
-            entry.grid(row=i, column=1, sticky="ew", padx=10, pady=5)
-
-            self.appname_widgets.append((label, entry))
-
-        # Add Change Name Button
-        save_button = ctk.CTkButton(self.scrollable_frame, text="Change", command=self.change_app_name)
-        save_button.grid(row=0, column=2, padx=10, pady=5)
 
     def create_bar(self):
         self.tab7 = self.add("Progress Bar")
@@ -399,6 +395,9 @@ class Tabview(ctk.CTkTabview):
                 original_name = label.cget("text")
                 appname_dict[original_name] = new_name
                 self.old_name_list.append(original_name)
+
+        conn = sqlite3.connect("sproutime.db")
+        cursor = conn.cursor()
         
     def open_debug_menu(self):
         global debug_menu
@@ -595,6 +594,15 @@ def setup_sql():
                 quest_Set INTEGER NOT NULL
             );
         ''')
+
+        cursor.execute('''
+                CREATE TABLE IF NOT EXISTS new_app_name(
+                    id INTEGER PRIMARY KEY,
+                    old_name TEXT NOT NULL,
+                    new_name TEXT
+            );
+        ''')
+        
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
