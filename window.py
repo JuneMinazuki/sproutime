@@ -803,7 +803,7 @@ def update_time():
             sleep(1)
     
 def update_log(today):
-    global app_dict
+    global app_dict, completed_list, quest_list, failed_list
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
@@ -815,11 +815,14 @@ def update_log(today):
                 cursor.execute("UPDATE app_time SET duration = ? WHERE app_name = ?", (app_dict[app], app))
             else:
                 cursor.execute("INSERT INTO app_time (app_name, date, duration) VALUES (?, ?, ?)", (app, today, app_dict[app]))
-                
+        
+        #Quest Completed
+        if 
+        
         #Streak
         cursor.execute("SELECT COUNT(*) FROM quest")
         quest_set = cursor.fetchone()[0]
-            
+        
         cursor.execute("SELECT COUNT(*) FROM streak WHERE date = ?", (today,))
         if cursor.fetchone()[0] > 0:
             cursor.execute("UPDATE streak SET quest_completed = ?, quest_set = ? WHERE date = ?", (len(completed_list), quest_set, today))
