@@ -124,6 +124,10 @@ class Tabview(ctk.CTkTabview):
         self.completed_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
         self.completed_list_TB.grid(row=0, column=0, columnspan=3)
 
+        #Name Change Log
+        self.namechange_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
+        self.namechange_list_TB.grid(row=1, column=0, columnspan=3)
+
         for col in range(1):
             self.score_tab.columnconfigure(col, weight=1)
         
@@ -288,6 +292,15 @@ class Tabview(ctk.CTkTabview):
                             self.completed_list_TB.insert("end", f'{appname_dict[quest[0]]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
                         else:
                             self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
+                
+                    # App Name Change Log
+                    cursor.execute("SELECT old_name, new_name FROM new_app_name")
+                    names = cursor.fetchall()
+
+                    self.namechange_list_TB.delete("0.0", "end")
+                    for name in names:
+                        self.namechange_list_TB.insert("end", f""" "{name[0]}" was changed into "{name[1]}"\n""")
+
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An error occurred: {e}")
                     conn.rollback()
@@ -314,12 +327,35 @@ class Tabview(ctk.CTkTabview):
                     cursor.execute("SELECT app_name, duration FROM app_time WHERE date >= ?", (one_week_ago,))
                     app_time = cursor.fetchall()
                     
+<<<<<<< HEAD
                     time_dict = {}
                     for app_name, time in app_time:
                         if app_name in time_dict:
                             time_dict[app_name] += time
                         else:   
                             time_dict[app_name] = time
+=======
+                    self.time_spend_TB.delete("0.0", "end")
+                    self.time_spend_TB.insert("end", 'Time Spend for Each App:\n')
+                    
+                    for app in app_time:      
+                        minutes = app[1] // 60
+                        hours = minutes // 60
+                        remaining_minutes = minutes % 60
+                        
+                        if appname_dict and app[0] in old_name_list:
+                            appname = appname_dict[app[0]]
+                        else:
+                            appname = app[0]
+
+                        if not (minutes == 0):
+                            if remaining_minutes == 0:               
+                                self.time_spend_TB.insert("end", f'{appname} : {hours} hour(s)\n')
+                            elif hours == 0:
+                                self.time_spend_TB.insert("end", f'{appname} : {remaining_minutes} minute(s)\n')
+                            else:
+                                self.time_spend_TB.insert("end", f'{appname} : {hours} hour(s) and {remaining_minutes} minute(s)\n')
+>>>>>>> main
                 
                     self.time_spend_chart.update_data(time_dict)
                     self.after(100, self.time_spend_chart._draw_chart)
@@ -335,14 +371,19 @@ class Tabview(ctk.CTkTabview):
                         minutes = app[1] // 60
                         hours = minutes // 60
                         remaining_minutes = minutes % 60
+                        
+                        if appname_dict and app[0] in old_name_list:
+                            appname = appname_dict[app[0]]
+                        else:
+                            appname = app[0]
 
                         if not (minutes == 0):
                             if remaining_minutes == 0:               
-                                self.total_time_spend_TB.insert("end", f'{app[0]} : {hours} hour(s)\n')
+                                self.total_time_spend_TB.insert("end", f'{appname} : {hours} hour(s)\n')
                             elif hours == 0:
-                                self.total_time_spend_TB.insert("end", f'{app[0]} : {remaining_minutes} minute(s)\n')
+                                self.total_time_spend_TB.insert("end", f'{appname} : {remaining_minutes} minute(s)\n')
                             else:
-                                self.total_time_spend_TB.insert("end", f'{app[0]} : {hours} hour(s) and {remaining_minutes} minute(s)\n')
+                                self.total_time_spend_TB.insert("end", f'{appname} : {hours} hour(s) and {remaining_minutes} minute(s)\n')
                             
                     #Total task complete since install
                     cursor.execute("SELECT SUM(quest_completed), SUM(quest_set) FROM streak")
@@ -528,7 +569,7 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
 
     def change_app_name(self):
-        global appname_dict, old_name_list, quest_list_update
+        global appname_dict, old_name_list, quest_list_update, quest_complete_update
 
         conn = sqlite3.connect("sproutime.db")
         cursor = conn.cursor()
@@ -555,6 +596,7 @@ class Tabview(ctk.CTkTabview):
                 conn.close()
 
         quest_list_update = True
+        quest_complete_update = True
         
     def refresh_stat(self):
         global stat_update
