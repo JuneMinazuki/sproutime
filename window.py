@@ -523,6 +523,9 @@ class Tabview(ctk.CTkTabview):
             if conn:
                 conn.close()
 
+        if maximum == 0:
+            completed_list.append(name)
+
         quest_list_update = True
 
     def change_app_name(self):
@@ -780,6 +783,8 @@ def setup_sql():
             conn.close()
 
 def get_active_app_name():
+    global appName
+
     if sys.platform == 'darwin':
         appName = AppKit.NSWorkspace.sharedWorkspace().activeApplication()['NSApplicationName']
         
@@ -793,16 +798,20 @@ def get_active_app_name():
     elif sys.platform == 'win32':
         foregroundApp = win32gui.GetForegroundWindow()
         _, pid = win32process.GetWindowThreadProcessId(foregroundApp)
-        process = psutil.Process(pid)
-        process_name = process.name()
-        appName = process_name.split(".")[0].capitalize()
-        if appName == "Chrome": 
-            tabName = get_active_tab_name()
-            if tabName == "URL not detected":
-                pass
-            else:
-                appName = tabName
-        
+        try:
+            process = psutil.Process(pid)
+            process_name = process.name()
+            appName = process_name.split(".")[0].capitalize()
+            if appName == "Chrome": 
+                tabName = get_active_tab_name()
+                if tabName == "URL not detected":
+                    pass
+                else:
+                    appName = tabName
+
+        except Exception as e:
+            pass
+
     return appName
 
 def get_all_app_list():
@@ -872,21 +881,32 @@ def get_active_tab_name():
 
     return tabName
 
-def quest_done_noti(app_name):
+def notify(app_name, info):
+    if appname_dict and app_name in old_name_list:
+        app_name = appname_dict[app_name]
+
     if sys.platform == 'darwin':
         pass
         
     elif sys.platform == 'win32':
-        Title = f"Quest Completed for {app_name}"
-        Msg = f"Well done! You've spent enough time on {app_name}"
+        if info == "min time completed":
+            Title = f"Quest Completed for {app_name}"
+            Msg = f"Well done! You've spent enough time on {app_name}"
+        
+        elif info == "max time failed":
+            Title = f"Quest Failed for {app_name}"
+            Msg = f"Oh no! You've exceeded your screentime limit for {app_name}"
 
+        elif info == "10 mins left":
+            Title = f"10 minutes left for {app_name}"
+            Msg = f"You are nearing your screentime limit for {app_name}"
+        
         noti = winotify.Notification(app_id="Sproutime",
-                        title = Title,
-                        msg = Msg,
-                        duration = "long")
+                title = Title,
+                msg = Msg,
+                duration = "long")
         
         noti.set_audio(winotify.audio.Default, loop=False)
-
         noti.show()
 
 def load_past_data():
@@ -911,7 +931,7 @@ def load_past_data():
             app_dict[app[0]] = app[1]
             
         #Completed quest
-        cursor.execute("SELECT app_name FROM quest_completion WHERE date = ?", (str(date.today()),))
+        cursor.execute("SELECT app_name, maximum FROM quest_completion WHERE date = ?", (str(date.today()),))
         quests = cursor.fetchall()
         
         for quest in quests:
@@ -964,8 +984,8 @@ def update_time():
             else:
                 app_dict[app_name] = _d_time_speed.get()
                 
-            if (quest_list) and (app_name in quest_list) and (app_name not in completed_list) and (app_name not in failed_list) and (quest_dict[app_name]["time"] <= app_dict[app_name]):
-                if quest_dict[app_name]["maximum"] == ">":
+            if (quest_list) and (app_name in quest_list) and (quest_dict[app_name]["time"] <= app_dict[app_name]):
+                if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
                     conn = sqlite3.connect('sproutime.db')
                     cursor = conn.cursor()
                     
@@ -985,11 +1005,11 @@ def update_time():
                             conn.close()
 
                     completed_list.append(app_name)
-                    quest_done_noti(app_name)
                     total_points += task_score
+                    notify(app_name, "min time completed")
                             
                 #Failed Quest      
-                elif quest_dict[app_name]["maximum"] == "<":
+                elif (quest_dict[app_name]["maximum"] == "<") and (app_name not in failed_list):
                     failed_list.append(app_name)
                     completed_list.remove(app_name)
                     
@@ -1008,6 +1028,8 @@ def update_time():
                     
                     total_points -= task_score
                     
+                    notify(app_name, "max time failed")
+
                 quest_complete_update = True
 
             app_time_update = True
@@ -1083,6 +1105,7 @@ running = False
 time_lock = threading.Lock()
 
 ##Global Var
+appName = ""
 update_tick = 1 if DEBUG else 60
 app_dict = {}
 temp_quest_app = ""
@@ -1118,10 +1141,10 @@ stat_update = True
 #First load
 running = True
 
-time = [">1 hour", ">2 hours", '>3 hours', '<1 hours', '<2 hours']
+time = [">1 hour", ">2 hours", '>3 hours', '<1 hour', '<2 hours']
 temp_quest_time = time[0]
 app_list = get_all_app_list()
-tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook", "LinkedIn"]
+tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook", "Linkedin"]
 theme_options = ["Light", "Dark", "System"]
 temp_quest_app = app_list[0]
 temp_quest_tab = tab_list[0]
