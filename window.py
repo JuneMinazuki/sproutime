@@ -193,12 +193,29 @@ class Tabview(ctk.CTkTabview):
             if conn:
                 conn.close()
 
-        if quest_list:
-            self.quest_dropdown = ctk.CTkComboBox(self.bar_tab, values=quest_list)
-            self.quest_dropdown.pack(pady=5)
+        # if quest_list is empty, set to "No quests available" until not empty and updated to dropdown
+        if not quest_list:
+            quest_list = ["No quests available"]
+        #Quest Option
+        self.quest_dropdown = ctk.CTkComboBox(self.bar_tab, values=quest_list, command=self.combobox_callback)
+        self.quest_dropdown.pack(pady=10, padx=10)
+        self.quest_dropdown.set(quest_list[0])  # Set default value
+        
 
+        
+
+        
+        
+        
+        
+        #Add Progress Bar Button
         self.add_progress_button = ctk.CTkButton(self.bar_tab, text="Add", command=self.add_progress_bar)
         self.add_progress_button.pack(pady=10)
+        # if quest_dropdown choose "No quests available", disable the button
+        if self.quest_dropdown.get() == "No quests available":
+            self.add_progress_button.configure(state="disabled")
+        else:
+            self.add_progress_button.configure(state="normal")
 
         self.progress_frame = ctk.CTkFrame(self.bar_tab)
         self.progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
