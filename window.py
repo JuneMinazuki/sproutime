@@ -135,26 +135,37 @@ class Tabview(ctk.CTkTabview):
         self.stat_tab = self.add("Stats")
         
         self.stat_frame = ctk.CTkFrame(self.stat_tab)
-        self.stat_frame.pack(pady=20, padx=10, fill="x")
+        self.stat_frame.pack(fill="x")
         for col in range(5):
             self.stat_frame.columnconfigure(col, weight=1)
+            
+        #Each Frame
+        self.time_spend_frame = ctk.CTkFrame(self.stat_frame)
+        self.time_spend_frame.grid(row=0, column=1, padx=10, pady=5)
         
-        #Time Spend for Each App
-        self.time_spend_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=180)
-        self.time_spend_TB.grid(row=0, column=1, padx=10, pady=20)
-        self.time_spend_TB.insert("end", 'Time Spend for Each App:\n')
+        self.total_time_spend_frame = ctk.CTkFrame(self.stat_frame)
+        self.total_time_spend_frame.grid(row=0, column=3, padx=10, pady=5)
+        
+        #Time Spend for Each App For 1 Week 
+        self.time_spend_label = ctk.CTkLabel(self.time_spend_frame, text="Time Spend for Each App In The Last Week:")
+        self.time_spend_label.grid(row=0, column=0)
+        
+        self.time_spend_chart = DrawPieChart(self.time_spend_frame, {})
+        self.time_spend_chart.grid(row=1, column=0)
         
         #Total Time Spend
-        self.total_time_spend_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=180)
-        self.total_time_spend_TB.grid(row=0, column=3, padx=10, pady=20)
-        self.total_time_spend_TB.insert("end", 'Total Time Spend:\n')
+        self.total_time_spend_label = ctk.CTkLabel(self.total_time_spend_frame, text="Total Time Spend:")
+        self.total_time_spend_label.grid(row=0, column=0)
+        
+        self.total_time_spend_chart = DrawPieChart(self.total_time_spend_frame, {})
+        self.total_time_spend_chart.grid(row=1, column=0)
 
         #Total task complete since install
-        self.task_complete_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=180)
+        self.task_complete_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
         self.task_complete_TB.grid(row=1, column=1, padx=10, pady=20)
         
         #Longest/Current streak
-        self.longest_streak_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=180)
+        self.longest_streak_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
         self.longest_streak_TB.grid(row=1, column=3, padx=10, pady=20)
         
         #Refresh Button
@@ -183,7 +194,6 @@ class Tabview(ctk.CTkTabview):
 
         self.progress_bars = []
         
-
     def add_progress_bar(self):
         # Frame for each progress bar
         bar_frame = ctk.CTkFrame(self.progress_frame)
@@ -318,55 +328,33 @@ class Tabview(ctk.CTkTabview):
                 cursor = conn.cursor()
                 
                 try:
-                    #Time Spend for Each App
+                    #Time Spend for Each App For 1 Week
                     cursor.execute("SELECT app_name, duration FROM app_time WHERE date >= ?", (one_week_ago,))
                     app_time = cursor.fetchall()
                     
-                    self.time_spend_TB.delete("0.0", "end")
-                    self.time_spend_TB.insert("end", 'Time Spend for Each App:\n')
-                    
-                    for app in app_time:      
-                        minutes = app[1] // 60
-                        hours = minutes // 60
-                        remaining_minutes = minutes % 60
-                        
-                        if appname_dict and app[0] in old_name_list:
-                            appname = appname_dict[app[0]]
-                        else:
-                            appname = app[0]
-
-                        if not (minutes == 0):
-                            if remaining_minutes == 0:               
-                                self.time_spend_TB.insert("end", f'{appname} : {hours} hour(s)\n')
-                            elif hours == 0:
-                                self.time_spend_TB.insert("end", f'{appname} : {remaining_minutes} minute(s)\n')
-                            else:
-                                self.time_spend_TB.insert("end", f'{appname} : {hours} hour(s) and {remaining_minutes} minute(s)\n')
+                    time_dict = {}
+                    for app_name, time in app_time:
+                        if app_name in time_dict:
+                            time_dict[app_name] += time
+                        else:   
+                            time_dict[app_name] = time
                 
+                    self.time_spend_chart.update_data(time_dict)
+                    self.after(100, self.time_spend_chart._draw_chart)
+
                     #Total Time Spend
                     cursor.execute("SELECT app_name, duration FROM app_time")
                     app_time = cursor.fetchall()
                     
-                    self.total_time_spend_TB.delete("0.0", "end")
-                    self.total_time_spend_TB.insert("end", 'Total Time Spend:\n')
-                    
-                    for app in app_time:       
-                        minutes = app[1] // 60
-                        hours = minutes // 60
-                        remaining_minutes = minutes % 60
-                        
-                        if appname_dict and app[0] in old_name_list:
-                            appname = appname_dict[app[0]]
-                        else:
-                            appname = app[0]
-
-                        if not (minutes == 0):
-                            if remaining_minutes == 0:               
-                                self.total_time_spend_TB.insert("end", f'{appname} : {hours} hour(s)\n')
-                            elif hours == 0:
-                                self.total_time_spend_TB.insert("end", f'{appname} : {remaining_minutes} minute(s)\n')
-                            else:
-                                self.total_time_spend_TB.insert("end", f'{appname} : {hours} hour(s) and {remaining_minutes} minute(s)\n')
+                    time_dict = {}
+                    for app_name, time in app_time:
+                        if app_name in time_dict:
+                            time_dict[app_name] += time
+                        else:   
+                            time_dict[app_name] = time
+                            
+                    self.total_time_spend_chart.update_data(time_dict)
+                    self.after(100, self.total_time_spend_chart._draw_chart)
                             
                     #Total task complete since install
                     cursor.execute("SELECT SUM(quest_completed), SUM(quest_set) FROM streak")
@@ -586,7 +574,7 @@ class Tabview(ctk.CTkTabview):
         update_log(str(date.today()))
         load_past_data()
         stat_update = True
-            
+
     def open_debug_menu(self):
         global debug_menu
     
@@ -595,6 +583,122 @@ class Tabview(ctk.CTkTabview):
         else:
             debug_menu.focus()
         
+class DrawPieChart(ctk.CTkFrame):
+    def __init__(self, master, data, **kwargs):
+        super().__init__(master, **kwargs)
+
+        self.data = data
+        self.colors = ["#6495ED", "#FFA07A", "#90EE90", "#F08080",
+                       "#B0E0E6", "#A0522D", "#F08080", "#D3D3D3",
+                       "#BDB76B", "#AFEEEE", "#ADD8E6", "#FFDAB9"]
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0)  # For the legend
+        self.grid_rowconfigure(0, weight=1)
+
+        self.pie_frame = None
+        self.canvas = None
+        self.legend_scrollable_frame = None
+        self._create_widgets()
+
+    def _create_widgets(self):
+        # Pack the pie chart into a frame
+        self.pie_frame = ctk.CTkFrame(self, width=610, height=260, fg_color='#323232') # increased pie_frame width
+        self.pie_frame.grid(row=0, column=0, sticky="nsew")
+
+        # Create a canvas widget for the pie chart
+        canvas_width = 260
+        canvas_height = 260
+        self.canvas = ctk.CTkCanvas(self.pie_frame, width=canvas_width, height=canvas_height, highlightthickness=0)
+        self.canvas.pack(side="left", padx=10, pady=10) # Use pack for single element in frame
+
+        # Create a frame for the legend
+        legend_frame = ctk.CTkFrame(self.pie_frame, width=300, height=260) # Increased legend_frame width to 300
+        legend_frame.pack(side="right", padx=5, pady=10, fill="y")
+        legend_frame.grid_propagate(False)  # Prevent the frame from resizing with content
+
+        # Create a scrollable container for the legend items
+        self.legend_scrollable_frame = ctk.CTkScrollableFrame(legend_frame, height=240)
+        self.legend_scrollable_frame.pack(fill="both", expand=True)
+
+        self._draw_chart()
+
+    def _draw_pie_chart(self):
+        self.canvas.delete("all")  # Clear the previous chart
+        total = sum(self.data.values())
+        start_angle = 0
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        center_x = canvas_width / 2
+        center_y = canvas_height / 2
+        radius = min(center_x, center_y) - 20
+
+        for i, (label, value) in enumerate(self.data.items()):
+            angle = (value / total) * 360
+
+            # Draw the arc (slice)
+            self.canvas.create_arc(
+                center_x - radius,
+                center_y - radius,
+                center_x + radius,
+                center_y + radius,
+                start=start_angle,
+                extent=angle,
+                fill=self.colors[i % len(self.colors)],
+                outline="black",
+                width=1,
+                tags="pie_slice"  # Add a tag to identify slices
+            )
+            start_angle += angle
+
+    def _create_legend(self):
+        # Clear previous legend items
+        for widget in self.legend_scrollable_frame.winfo_children():
+            widget.pack_forget() 
+        
+        for i, (label, value) in enumerate(self.data.items()):
+            minutes = value // 60
+            hours = minutes // 60
+            remaining_minutes = minutes % 60
+
+            if minutes == 0:
+                continue
+            else:
+                if remaining_minutes == 0: 
+                    time = f'{hours} hour(s)'
+                elif hours == 0:
+                    time = f'{remaining_minutes} minute(s)'
+                else:
+                    time= f'{hours} hour(s) & {remaining_minutes} minute(s)'
+
+            # Create a frame for each legend item (color + text)
+            legend_item_frame = ctk.CTkFrame(self.legend_scrollable_frame, fg_color="transparent")
+            legend_item_frame.pack(pady=(0, 10), fill="x")  # Added some padding between items
+
+            # Create the color box and label container
+            color_label_container = ctk.CTkFrame(legend_item_frame, fg_color="transparent")
+            color_label_container.pack(side="top", fill="x")
+
+            # Create the color box
+            legend_color_box = ctk.CTkLabel(color_label_container, text="", width=20, height=20, bg_color=self.colors[i % len(self.colors)], fg_color=self.colors[i % len(self.colors)])
+            legend_color_box.pack(side="left", padx=(5, 10))  # Reduced horizontal padding
+
+            # Create the label (Fruit Name)
+            legend_label = ctk.CTkLabel(color_label_container, text=f"{label}:", anchor="w")
+            legend_label.pack(side="left", fill="x", expand=True, padx=(0, 20))
+
+            # Create the value label below
+            legend_value_label = ctk.CTkLabel(legend_item_frame, text=f"{time}", anchor="w")
+            legend_value_label.pack(side="top", fill="x", padx=(35, 10))  # Indent to align under the value
+
+    def _draw_chart(self):
+        self._draw_pie_chart()
+        self._create_legend()
+        
+    def update_data(self, new_data):
+        self.data = new_data
+        self._draw_chart()
+
 class DebugMenu(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
@@ -984,7 +1088,6 @@ def load_past_data():
             conn.close()
             
     app_time_update = True
-
 
 def update_time():
     global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, _d_time_speed, task_score, total_points, completed_list, stat_update
