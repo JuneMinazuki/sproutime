@@ -41,117 +41,141 @@ class Tabview(ctk.CTkTabview):
         self.stats_thread = None
         self.bar_thread = None
 
+        #Create widget
         self.create_progress_widgets()
         self.create_quest_widgets()
         self.create_score_widgets()
         self.create_stats_widgets()
         self.create_setting_widgets()
-        self.create_changeappname_widgets()
-        self.create_bar()
+        self.create_bar_widgets()
 
         self.start_updating()
 
     def create_progress_widgets(self):
-        self.tab1 = self.add("Progress")
+        self.progress_tab = self.add("Progress")
 
         #Textbox
-        self.app_list_TB = ctk.CTkTextbox(self.tab1, width=1080, height=180)
+        self.app_list_TB = ctk.CTkTextbox(self.progress_tab, width=1080, height=180)
         self.app_list_TB.grid(row=0, column=0, columnspan=4)
 
         for col in range(3):
-            self.tab1.columnconfigure(col, weight=1)
+            self.progress_tab.columnconfigure(col, weight=1)
 
         for row in range(5):
-            self.tab1.rowconfigure(row, weight=1)
+            self.progress_tab.rowconfigure(row, weight=1)
 
     def create_quest_widgets(self):
         global quest_list_update
-        self.tab2 = self.add("Quest")
+        self.quest_tab = self.add("Quest")
 
         #App Option
-        self.app_dropdown = ctk.CTkComboBox(self.tab2,values=app_list, command=self.combobox_callback)
+        self.app_dropdown = ctk.CTkComboBox(self.quest_tab,values=app_list, command=self.combobox_callback)
         self.app_dropdown.grid(row=0, column=0, padx=10, pady=20, sticky='w')
 
         #Time Option
-        self.time_dropdown = ctk.CTkComboBox(self.tab2,values=time, command=self.timebox_callback)
+        self.time_dropdown = ctk.CTkComboBox(self.quest_tab,values=time, command=self.timebox_callback)
         self.time_dropdown.grid(row=0, column=2, padx=10, pady=20, sticky='e')
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
-        self.tabBox = ctk.CTkComboBox(self.tab2, values=tab_list, command=self.tabBox_callback)
+        self.tabBox = ctk.CTkComboBox(self.quest_tab, values=tab_list, command=self.tabBox_callback)
         self.tabBox.grid(row=0, column=1)
         self.tabBox.set(tab_list[0])
         self.check_for_chrome()    
         
         #Refresh Button
-        self.refresh_button = ctk.CTkButton(self.tab2, text="Refresh", command=self.refresh_app_list)
+        self.refresh_button = ctk.CTkButton(self.quest_tab, text="Refresh", command=self.refresh_app_list)
         self.refresh_button.grid(row=1, column=0, padx=10, pady=20, sticky='w')
         
         #Delete Button
-        self.delete_button = ctk.CTkButton(self.tab2, text="Delete", command=self.delete_quest)
+        self.delete_button = ctk.CTkButton(self.quest_tab, text="Delete", command=self.delete_quest)
         self.delete_button.grid(row=1, column=1, padx=10, pady=20, sticky="e")
 
         #Save Button
-        self.save_button = ctk.CTkButton(self.tab2, text="Save", command=self.save_quest_time)
+        self.save_button = ctk.CTkButton(self.quest_tab, text="Save", command=self.save_quest_time)
         self.save_button.grid(row=1, column=2, padx=10, pady=20, sticky='e')
 
         #Quest Saved Textbox
-        self.quest_list_TB = ctk.CTkTextbox(self.tab2, width=1080, height=180)
+        self.quest_list_TB = ctk.CTkTextbox(self.quest_tab, width=1080, height=180)
         self.quest_list_TB.grid(row=2, column=0, padx=10, pady=20, columnspan = 3)
         quest_list_update = True
 
-    def create_score_widgets(self):
-        self.tab3 = self.add("Score")
-
-        #Completed Quests Textbox
-        self.completed_list_TB = ctk.CTkTextbox(self.tab3, width=1080, height=180)
-        self.completed_list_TB.grid(row=0, column=0, columnspan=3)
-
-        for col in range(1):
-            self.tab3.columnconfigure(col, weight=1)
-        
-    def create_stats_widgets(self):
-        self.tab4 = self.add("Stats")
-
-    def create_setting_widgets(self):
-        self.tab5 = self.add("Settings")
-        
-        #Theme
-        self.theme_selector = ctk.CTkOptionMenu(master=self.tab5, values=theme_options, command=lambda theme: ctk.set_appearance_mode(theme))  # Change theme
-        self.theme_selector.pack(padx=20, pady=10)
-        self.theme_selector.set("System")  # Set default theme to "System"
-        
-        #Debug Button
-        self.debug_button = ctk.CTkButton(master=self.tab5, text="Debug", command=self.open_debug_menu)
-        self.debug_button.pack(padx=20, pady=10)
-
-    def create_changeappname_widgets(self):
-        self.tab6 = self.add("Change App Name")
-
+        # Scrollable frame for name changer
         self.appname_widgets = []  
 
-        # Scrollable frame for name changer
-        self.scrollable_frame = ctk.CTkScrollableFrame(self.tab6)
-        self.scrollable_frame.pack(fill="both", expand=True)
+        self.scrollable_frame = ctk.CTkScrollableFrame(self.quest_tab)
+        self.scrollable_frame.grid(row=3, column=0, sticky="nsew")
 
         for i, app in enumerate(app_list):
             label = ctk.CTkLabel(self.scrollable_frame, text=app)
-            label.grid(row=i, column=0, sticky="w", padx=10, pady=5)
+            label.grid(row=i, column=0, padx=10, pady=5)
 
             entry = ctk.CTkEntry(self.scrollable_frame, placeholder_text="New name")
-            entry.grid(row=i, column=1, sticky="ew", padx=10, pady=5)
+            entry.grid(row=i, column=1, padx=10, pady=5)
 
             self.appname_widgets.append((label, entry))
 
         # Add Change Name Button
-        save_button = ctk.CTkButton(self.scrollable_frame, text="Change", command=self.change_app_name)
-        save_button.grid(row=0, column=2, padx=10, pady=5)
+        save_button = ctk.CTkButton(self.quest_tab, text="Change", command=self.change_app_name)
+        save_button.grid(row=4, column=0)
 
-    def create_bar(self):
-        self.tab7 = self.add("Progress Bar")
-        self.add_progress_button = ctk.CTkButton(self.tab7, text="Add", command=self.add_progress_bar)
+    def create_score_widgets(self):
+        self.score_tab = self.add("Score")
+
+        #Completed Quests Textbox
+        self.completed_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
+        self.completed_list_TB.grid(row=0, column=0, columnspan=3)
+
+        for col in range(1):
+            self.score_tab.columnconfigure(col, weight=1)
+        
+    def create_stats_widgets(self):
+        self.stat_tab = self.add("Stats")
+        
+        self.stat_frame = ctk.CTkFrame(self.stat_tab)
+        self.stat_frame.pack(pady=20, padx=10, fill="x")
+        for col in range(5):
+            self.stat_frame.columnconfigure(col, weight=1)
+        
+        #Time Spend for Each App
+        self.time_spend_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=180)
+        self.time_spend_TB.grid(row=0, column=1, padx=10, pady=20)
+        self.time_spend_TB.insert("end", 'Time Spend for Each App:\n')
+        
+        #Total Time Spend
+        self.total_time_spend_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=180)
+        self.total_time_spend_TB.grid(row=0, column=3, padx=10, pady=20)
+        self.total_time_spend_TB.insert("end", 'Total Time Spend:\n')
+
+        #Total task complete since install
+        self.task_complete_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=180)
+        self.task_complete_TB.grid(row=1, column=1, padx=10, pady=20)
+        
+        #Longest/Current streak
+        self.longest_streak_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=180)
+        self.longest_streak_TB.grid(row=1, column=3, padx=10, pady=20)
+        
+        #Refresh Button
+        self.refresh_stat_button = ctk.CTkButton(self.stat_tab, text="Refresh", command=self.refresh_stat, width=200)
+        self.refresh_stat_button.pack(pady=20, padx=10, expand=True)
+        
+    def create_setting_widgets(self):
+        self.setting_tab = self.add("Settings")
+        
+        #Theme
+        self.theme_selector = ctk.CTkOptionMenu(master=self.setting_tab, values=theme_options, command=lambda theme: ctk.set_appearance_mode(theme))  # Change theme
+        self.theme_selector.pack(padx=20, pady=10)
+        self.theme_selector.set("System")  # Set default theme to "System"
+        
+        #Debug Button
+        self.debug_button = ctk.CTkButton(master=self.setting_tab, text="Debug", command=self.open_debug_menu)
+        self.debug_button.pack(padx=20, pady=10)
+
+    def create_bar_widgets(self):
+        self.bar_tab = self.add("Progress Bar")
+        self.add_progress_button = ctk.CTkButton(self.bar_tab, text="Add", command=self.add_progress_bar)
         self.add_progress_button.pack(pady=10)
 
-        self.progress_frame = ctk.CTkFrame(self.tab7)
+        self.progress_frame = ctk.CTkFrame(self.bar_tab)
         self.progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.progress_bars = []
@@ -222,23 +246,22 @@ class Tabview(ctk.CTkTabview):
 
 
     def update_progress(self):
-        global running, app_time_update, app_dict, update_tick, appname_dict
+        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list
         
         while running:
             if app_time_update:
                 self.app_list_TB.delete("0.0", "end")
                 for app in app_dict:
-                    if appname_dict and app in self.old_name_list:
+                    if appname_dict and app in old_name_list:
                         self.app_list_TB.insert("end", f'{appname_dict[app]}: {app_dict[app]} seconds\n')
                     else:
                         self.app_list_TB.insert("end", f'{app}: {app_dict[app]} seconds\n')
                 
                 app_time_update = False
-                
             sleep(update_tick)
 
     def update_quest(self):
-        global running, quest_list_update, quest_dict, quest_list, update_tick
+        global running, quest_list_update, quest_dict, quest_list, update_tick, old_name_list
         
         while running:
             if quest_list_update:
@@ -255,7 +278,7 @@ class Tabview(ctk.CTkTabview):
                     for quest in quests:
                         maximum = ">" if quest[1] == 1 else "<"
 
-                        if appname_dict and quest[0] in self.old_name_list:
+                        if appname_dict and quest[0] in old_name_list:
                             self.quest_list_TB.insert("0.0", f'{appname_dict[quest[0]]} : {maximum}{quest[2] / 60} hour\n')
                         else:
                             self.quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{quest[2] / 60} hour\n')
@@ -268,12 +291,12 @@ class Tabview(ctk.CTkTabview):
                 finally:
                     if conn:
                         conn.close()
+                        
                 quest_list_update = False
-
             sleep(update_tick)
             
     def update_score(self):
-        global running, quest_complete_update, update_tick
+        global running, quest_complete_update, update_tick, old_name_list
         
         while running:
             if quest_complete_update:
@@ -288,7 +311,7 @@ class Tabview(ctk.CTkTabview):
                     for quest in quests:
                         maximum = ">" if quest[2] == 1 else "<"
                         
-                        if appname_dict and quest[0] in self.old_name_list:
+                        if appname_dict and quest[0] in old_name_list:
                             self.completed_list_TB.insert("end", f'{appname_dict[quest[0]]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
                         else:
                             self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
@@ -303,12 +326,112 @@ class Tabview(ctk.CTkTabview):
             sleep(update_tick)
 
     def update_stats(self): 
-        global running, update_tick
+        global running, update_tick, stat_update
                
         while running:
+            if stat_update:
+                today = datetime.now()
+                one_week_ago = (today - timedelta(days=7)).strftime('%Y-%m-%d')
+        
+                conn = sqlite3.connect('sproutime.db')
+                cursor = conn.cursor()
+                
+                try:
+                    #Time Spend for Each App
+                    cursor.execute("SELECT app_name, duration FROM app_time WHERE date >= ?", (one_week_ago,))
+                    app_time = cursor.fetchall()
+                    
+                    self.time_spend_TB.delete("0.0", "end")
+                    self.time_spend_TB.insert("end", 'Time Spend for Each App:\n')
+                    
+                    for app in app_time:      
+                        minutes = app[1] // 60
+                        hours = minutes // 60
+                        remaining_minutes = minutes % 60
+
+                        if not (minutes == 0):
+                            if remaining_minutes == 0:               
+                                self.time_spend_TB.insert("end", f'{app[0]} : {hours} hour(s)\n')
+                            elif hours == 0:
+                                self.time_spend_TB.insert("end", f'{app[0]} : {remaining_minutes} minute(s)\n')
+                            else:
+                                self.time_spend_TB.insert("end", f'{app[0]} : {hours} hour(s) and {remaining_minutes} minute(s)\n')
+                
+                    #Total Time Spend
+                    cursor.execute("SELECT app_name, duration FROM app_time")
+                    app_time = cursor.fetchall()
+                    
+                    self.total_time_spend_TB.delete("0.0", "end")
+                    self.total_time_spend_TB.insert("end", 'Total Time Spend:\n')
+                    
+                    for app in app_time:       
+                        minutes = app[1] // 60
+                        hours = minutes // 60
+                        remaining_minutes = minutes % 60
+
+                        if not (minutes == 0):
+                            if remaining_minutes == 0:               
+                                self.total_time_spend_TB.insert("end", f'{app[0]} : {hours} hour(s)\n')
+                            elif hours == 0:
+                                self.total_time_spend_TB.insert("end", f'{app[0]} : {remaining_minutes} minute(s)\n')
+                            else:
+                                self.total_time_spend_TB.insert("end", f'{app[0]} : {hours} hour(s) and {remaining_minutes} minute(s)\n')
+                            
+                    #Total task complete since install
+                    cursor.execute("SELECT SUM(quest_completed), SUM(quest_set) FROM streak")
+                    task = cursor.fetchone()
+
+                    self.task_complete_TB.delete("0.0", "end")
+                    
+                    if (task) and (task[0] is not None) and (task[1] is not None):
+                        self.task_complete_TB.insert("end", f'Total Task Completed: {task[0]}\n')
+                        self.task_complete_TB.insert("end", f'Total Task Missed: {task[1] - task[0]}\n\n')
+                        
+                        if task[1] == 0:
+                            self.task_complete_TB.insert("end", '0% of task completed\n')
+                        else:
+                            self.task_complete_TB.insert("end", f'{"{:.2f}".format(task[0] / task[1] * 100)}% of task completed\n')
+                    
+                    #Longest/Current streak
+                    current_streak = 0
+                    longest_streak = 0
+                    count = 0
+                    self.longest_streak_TB.delete("0.0", "end")
+                    
+                    cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(date.today()),))
+                    days = cursor.fetchall()
+                    
+                    for day in days:
+                        if day[1] == day[2]:
+                            current_streak += 1
+                        else:
+                            break
+                    self.longest_streak_TB.insert("end", f'Current Streak: {current_streak}\n')
+                    
+                    cursor.execute("SELECT date, quest_completed, quest_set FROM streak ORDER BY date ASC")
+                    days = cursor.fetchall()
+
+                    if days:
+                        for day in days:
+                            if day[1] == day[2]:
+                                count += 1
+                            else:
+                                longest_streak = max(longest_streak, count)
+                                count = 0
+                    longest_streak = max(longest_streak, count)
+                    self.longest_streak_TB.insert("end", f'Longest Streak: {longest_streak}\n')
+                    
+                except sqlite3.Error as e:
+                    if DEBUG: print(f"An error occurred: {e}")
+                    conn.rollback()
+                finally:
+                    if conn:
+                        conn.close()
+                
+                stat_update = False
             sleep(update_tick)
             
-    def start_updating(self):
+    def start_updating(self):     
         tab = self.get()
         self.progress_active = tab == "Progress"
         self.quest_active = tab == "Quest"
@@ -342,7 +465,7 @@ class Tabview(ctk.CTkTabview):
         
         #Stats Tab
         if self.stats_active and (self.stats_thread is None or not self.stats_thread.is_alive()):
-            self.stats_thread = threading.Thread(target=self.update_progress, daemon=True)
+            self.stats_thread = threading.Thread(target=self.update_stats, daemon=True)
             self.stats_thread.start()
         elif not self.stats_active and self.stats_thread and self.stats_thread.is_alive():
             # The thread will naturally pause in its while loop
@@ -382,7 +505,22 @@ class Tabview(ctk.CTkTabview):
         temp_quest_time = choice
 
     def refresh_app_list(self):
-        self.app_dropdown.configure(values=get_all_app_list())
+        app_list = get_all_app_list()
+        self.app_dropdown.configure(values=app_list)
+
+        self.appname_widgets = []
+
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+
+        for i, app in enumerate(app_list):
+            label = ctk.CTkLabel(self.scrollable_frame, text=app)
+            label.grid(row=i, column=0, padx=10, pady=5)
+
+            entry = ctk.CTkEntry(self.scrollable_frame, placeholder_text="New name")
+            entry.grid(row=i, column=1, padx=10, pady=5)
+
+            self.appname_widgets.append((label, entry))
 
     def delete_quest(self):
         global temp_quest_app, quest_list_update
@@ -427,24 +565,50 @@ class Tabview(ctk.CTkTabview):
             if conn:
                 conn.close()
 
+        if maximum == 0:
+            completed_list.append(name)
+
         quest_list_update = True
 
     def change_app_name(self):
-        global appname_dict
+        global appname_dict, old_name_list, quest_list_update
 
-        self.old_name_list = []
+        conn = sqlite3.connect("sproutime.db")
+        cursor = conn.cursor()
+        try:
+            for label, entry in self.appname_widgets:
+                new_name = entry.get().strip()
+                if new_name: 
+                    original_name = label.cget("text")
+                    appname_dict[original_name] = new_name
+                    old_name_list.append(original_name)
+                    cursor.execute("SELECT * FROM new_app_name WHERE old_name = ?", (original_name,))
+                    row = cursor.fetchone()
+                    if row:
+                        cursor.execute("DELETE FROM new_app_name WHERE old_name = ?", (original_name,))
+                        conn.commit()
+                    cursor.execute("INSERT INTO new_app_name (old_name, new_name) VALUES (?, ?)", (original_name, new_name))
+                entry.delete(0, 'end')
+                conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
 
-        for label, entry in self.appname_widgets:
-            new_name = entry.get().strip()
-            if new_name: 
-                original_name = label.cget("text")
-                appname_dict[original_name] = new_name
-                self.old_name_list.append(original_name)
+        quest_list_update = True
         
+    def refresh_stat(self):
+        global stat_update
+        update_log(str(date.today()))
+        load_past_data()
+        stat_update = True
+            
     def open_debug_menu(self):
         global debug_menu
     
-        if debug_menu is None or debug_menu.winfo_exists():
+        if debug_menu is None or not debug_menu.winfo_exists():
             debug_menu = DebugMenu(self)  # Pass the main window as parent
         else:
             debug_menu.focus()
@@ -468,7 +632,7 @@ class DebugMenu(ctk.CTkToplevel):
         self.time_speed_label = ctk.CTkLabel(master=self, text="Speed Up")
         self.time_speed_label.grid(row=0, column=0, padx=20, pady=10, sticky='w')
         self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text='', variable=_d_time_speed,
-                                                    onvalue=3600, offvalue=1, width=10)
+                                                    onvalue=300, offvalue=1, width=10)
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
         
         #Clear quest
@@ -561,7 +725,7 @@ class DebugMenu(ctk.CTkToplevel):
                 conn.close()
             
     def reset_database(self):
-        global app_time_update, quest_complete_update, quest_list_update
+        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, total_points, appname_dict, old_name_list
         
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
@@ -585,14 +749,22 @@ class DebugMenu(ctk.CTkToplevel):
             if conn:
                 conn.close()
         
+        app_dict = {}
+        quest_list = []
+        quest_dict = {}
+        completed_list = []
+        failed_list = []
+        total_points = 0
+
+        appname_dict = {}
+        old_name_list = []
+        
         setup_sql()
         app_time_update = True
         quest_list_update = True
         quest_complete_update = True
         
     def close_debug_menu(self):
-        global debug_menu
-        debug_menu = None
         self.destroy() 
     
 def setup_sql():   
@@ -633,9 +805,18 @@ def setup_sql():
             CREATE TABLE IF NOT EXISTS streak (
                 date TEXT PRIMARY KEY, --Store as YYYY-MM-DD
                 quest_completed INTEGER NOT NULL,
-                quest_Set INTEGER NOT NULL
+                quest_set INTEGER NOT NULL
             );
         ''')
+
+        cursor.execute('''
+                CREATE TABLE IF NOT EXISTS new_app_name(
+                    id INTEGER PRIMARY KEY,
+                    old_name TEXT NOT NULL,
+                    new_name TEXT
+            );
+        ''')
+        
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
@@ -644,6 +825,8 @@ def setup_sql():
             conn.close()
 
 def get_active_app_name():
+    global appName
+
     if sys.platform == 'darwin':
         appName = AppKit.NSWorkspace.sharedWorkspace().activeApplication()['NSApplicationName']
         
@@ -657,16 +840,20 @@ def get_active_app_name():
     elif sys.platform == 'win32':
         foregroundApp = win32gui.GetForegroundWindow()
         _, pid = win32process.GetWindowThreadProcessId(foregroundApp)
-        process = psutil.Process(pid)
-        process_name = process.name()
-        appName = process_name.split(".")[0].capitalize()
-        if appName == "Chrome": 
-            tabName = get_active_tab_name()
-            if tabName == "URL not detected":
-                pass
-            else:
-                appName = tabName
-        
+        try:
+            process = psutil.Process(pid)
+            process_name = process.name()
+            appName = process_name.split(".")[0].capitalize()
+            if appName == "Chrome": 
+                tabName = get_active_tab_name()
+                if tabName == "URL not detected":
+                    pass
+                else:
+                    appName = tabName
+
+        except Exception as e:
+            pass
+
     return appName
 
 def get_all_app_list():
@@ -736,25 +923,43 @@ def get_active_tab_name():
 
     return tabName
 
-def quest_done_noti(app_name):
+def notify(app_name, info):
+    if appname_dict and app_name in old_name_list:
+        app_name = appname_dict[app_name]
+
     if sys.platform == 'darwin':
         pass
         
     elif sys.platform == 'win32':
-        Title = f"Quest Completed for {app_name}"
-        Msg = f"Well done! You've spent enough time on {app_name}"
+        if info == "min time completed":
+            Title = f"Quest Completed for {app_name}"
+            Msg = f"Well done! You've spent enough time on {app_name}"
+        
+        elif info == "max time failed":
+            Title = f"Quest Failed for {app_name}"
+            Msg = f"Oh no! You've exceeded your screentime limit for {app_name}"
 
+        elif info == "10 mins left":
+            Title = f"10 minutes left for {app_name}"
+            Msg = f"You are nearing your screentime limit for {app_name}"
+        
         noti = winotify.Notification(app_id="Sproutime",
-                        title = Title,
-                        msg = Msg,
-                        duration = "long")
+                title = Title,
+                msg = Msg,
+                duration = "long")
         
         noti.set_audio(winotify.audio.Default, loop=False)
-
         noti.show()
 
 def load_past_data():
-    global app_time_update, app_dict, completed_list, failed_list
+    global app_time_update, app_dict, completed_list, failed_list, total_points, appname_dict, old_name_list, quest_list, quest_dict
+    
+    app_dict = {}
+    quest_list = []
+    quest_dict = {}
+    completed_list = []
+    failed_list = []
+    total_points = 0
     
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
@@ -768,11 +973,27 @@ def load_past_data():
             app_dict[app[0]] = app[1]
             
         #Completed quest
-        cursor.execute("SELECT app_name FROM quest_completion WHERE date = ?", (str(date.today()),))
-        apps = cursor.fetchall()
+        cursor.execute("SELECT app_name, maximum FROM quest_completion WHERE date = ?", (str(date.today()),))
+        quests = cursor.fetchall()
         
-        for app in apps:
-            completed_list.append(app[0])
+        for quest in quests:
+            completed_list.append(quest[0])
+            
+        #Total Score
+        cursor.execute("SELECT SUM(score_earn) FROM quest_completion")
+        score = cursor.fetchone()
+        
+        if score and score[0] is not None:
+            total_points = score[0]
+
+        #Updated new names
+        cursor.execute("SELECT * FROM new_app_name")
+
+        for col in cursor:
+            old_name_list.append(col[1])
+            appname_dict[col[1]] = col[2]
+
+
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
@@ -784,7 +1005,7 @@ def load_past_data():
 
 
 def update_time():
-    global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, _d_time_speed, task_score, total_points, completed_list
+    global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, _d_time_speed, task_score, total_points, completed_list, stat_update
     
     while running:
         now = datetime.now()
@@ -805,49 +1026,101 @@ def update_time():
             else:
                 app_dict[app_name] = _d_time_speed.get()
                 
-            if (quest_list) and (app_name in quest_list) and (app_name not in completed_list) and (app_name not in failed_list) and (quest_dict[app_name]["time"] <= app_dict[app_name]):
-                if quest_dict[app_name]["maximum"] == ">":
-                    conn = sqlite3.connect('sproutime.db')
-                    cursor = conn.cursor()
-                    
-                    try:
-                        cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
-                        quest = cursor.fetchone()
-                        quest_time = quest[0]
-                        maximum = quest[1]
+            if (quest_list) and (app_name in quest_list):
+                if quest_dict[app_name]["time"] <= app_dict[app_name]:
+                    if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
+                        conn = sqlite3.connect('sproutime.db')
+                        cursor = conn.cursor()
                         
-                        cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
-                        conn.commit()
-                    except sqlite3.Error as e:
-                        if DEBUG: print(f"An error occurred: {e}")
-                        conn.rollback()
-                    finally:
-                        if conn:
-                            conn.close()
-
-                    completed_list.append(app_name)
-                    quest_done_noti(app_name)
-                    total_points += task_score
+                        try:
+                            cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
+                            quest = cursor.fetchone()
+                            quest_time = quest[0]
+                            maximum = quest[1]
                             
-                elif quest_dict[app_name]["maximum"] == "<":
-                    failed_list.append(app_name)
-                quest_complete_update = True
+                            cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
+                            conn.commit()
+                        except sqlite3.Error as e:
+                            if DEBUG: print(f"An error occurred: {e}")
+                            conn.rollback()
+                        finally:
+                            if conn:
+                                conn.close()
+
+                        completed_list.append(app_name)
+                        total_points += task_score
+                        notify(app_name, "min time completed")
+                                
+                    #Failed Quest      
+                    elif (quest_dict[app_name]["maximum"] == "<") and (app_name not in failed_list):
+                        failed_list.append(app_name)
+                        completed_list.remove(app_name)
+                        
+                        conn = sqlite3.connect('sproutime.db')
+                        cursor = conn.cursor()
+                        
+                        try:
+                            cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
+                            conn.commit()
+                        except sqlite3.Error as e:
+                            if DEBUG: print(f"An error occurred: {e}")
+                            conn.rollback()
+                        finally:
+                            if conn:
+                                conn.close()
+                        
+                        total_points -= task_score
+                        
+                        notify(app_name, "max time failed")
+
+                    quest_complete_update = True
+                
+                # 10 mins left till quest failed
+                elif ((quest_dict[app_name]["time"] - 600) == app_dict[app_name]) and (quest_dict[app_name]["maximum"] == "<"):
+                    notify(app_name, "10 mins left")
 
             app_time_update = True
             sleep(1)
     
 def update_log(today):
-    global app_dict
+    global app_dict, completed_list, quest_list, failed_list, task_score
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
     try:
+        #App Time
         for app in app_dict:
             cursor.execute("SELECT COUNT(*) FROM app_time WHERE app_name = ? AND date = ?", (app, today))
             if cursor.fetchone()[0] > 0:
                 cursor.execute("UPDATE app_time SET duration = ? WHERE app_name = ?", (app_dict[app], app))
             else:
                 cursor.execute("INSERT INTO app_time (app_name, date, duration) VALUES (?, ?, ?)", (app, today, app_dict[app]))
+        
+        #Quest Completed For "<" Quest
+        if (quest_list):
+            cursor.execute("SELECT time, app_name FROM quest WHERE maximum = 0")
+            quests = cursor.fetchall()
+            
+            for quest in quests:
+                quest_time = quest[0]
+                app_name = quest[1]
+                
+                if (app_name in quest_list) and (app_name not in failed_list):
+                    cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, 0, ?)", (today, app_name, quest_time, task_score))
+                elif (app_name in failed_list):
+                    cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app, today))
+
+        #Streak
+        cursor.execute("SELECT COUNT(*) FROM quest")
+        quest_set = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM streak WHERE date = ?", (today,))
+        if quest_set > 0: 
+            if cursor.fetchone()[0] > 0:
+                cursor.execute("UPDATE streak SET quest_completed = ?, quest_set = ? WHERE date = ?", (len(completed_list), quest_set, today))
+            else:
+                cursor.execute("INSERT INTO streak (date, quest_completed, quest_set) VALUES (?, ?, ?)", (today, len(completed_list), quest_set))
+        
         conn.commit()
         app_dict = {}
     except sqlite3.Error as e:
@@ -879,6 +1152,7 @@ running = False
 time_lock = threading.Lock()
 
 ##Global Var
+appName = ""
 update_tick = 1 if DEBUG else 60
 app_dict = {}
 temp_quest_app = ""
@@ -897,24 +1171,27 @@ google = "Google Chrome"
 if sys.platform == "win32":
     google = "Chrome"
 
-appname_dict = {} # used in name changer
+ # Used in name changer
+appname_dict = {}
+old_name_list = []
 
 #Debug Menu Var
 debug_menu = None
 _d_time_speed = ctk.IntVar(value=1)
 
 #GUI Update Request
-app_time_update = False
-quest_list_update = False
+app_time_update = True
+quest_list_update = True
 quest_complete_update = True
+stat_update = True
 
 #First load
 running = True
 
-time = [">1 hour", ">2 hours", '>3 hours', '<1 hours', '<2 hours']
+time = [">1 hour", ">2 hours", '>3 hours', '<1 hour', '<2 hours']
 temp_quest_time = time[0]
 app_list = get_all_app_list()
-tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook", "LinkedIn"]
+tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook", "Linkedin"]
 theme_options = ["Light", "Dark", "System"]
 temp_quest_app = app_list[0]
 temp_quest_tab = tab_list[0]
