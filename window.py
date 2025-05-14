@@ -530,23 +530,27 @@ class Tabview(ctk.CTkTabview):
 
         conn = sqlite3.connect("sproutime.db")
         cursor = conn.cursor()
-        
-        for label, entry in self.appname_widgets:
-            new_name = entry.get().strip()
-            if new_name: 
-                original_name = label.cget("text")
-                appname_dict[original_name] = new_name
-                old_name_list.append(original_name)
-                cursor.execute("SELECT * FROM new_app_name WHERE old_name = ?", (original_name,))
-                row = cursor.fetchone()
-                if row:
-                    cursor.execute("DELETE FROM new_app_name WHERE old_name = ?", (original_name,))
-                    conn.commit()
-                cursor.execute("INSERT INTO new_app_name (old_name, new_name) VALUES (?, ?)", (original_name, new_name))
-            entry.delete(0, 'end')
-
-        conn.commit()
-        conn.close()
+        try:
+            for label, entry in self.appname_widgets:
+                new_name = entry.get().strip()
+                if new_name: 
+                    original_name = label.cget("text")
+                    appname_dict[original_name] = new_name
+                    old_name_list.append(original_name)
+                    cursor.execute("SELECT * FROM new_app_name WHERE old_name = ?", (original_name,))
+                    row = cursor.fetchone()
+                    if row:
+                        cursor.execute("DELETE FROM new_app_name WHERE old_name = ?", (original_name,))
+                        conn.commit()
+                    cursor.execute("INSERT INTO new_app_name (old_name, new_name) VALUES (?, ?)", (original_name, new_name))
+                entry.delete(0, 'end')
+                conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
 
         quest_list_update = True
         
