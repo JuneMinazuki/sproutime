@@ -172,6 +172,31 @@ class Tabview(ctk.CTkTabview):
 
     def create_bar_widgets(self):
         self.bar_tab = self.add("Progress Bar")
+        # get data from database
+        global quest_list_update, quest_list,quest_dict
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT app_name, maximum, time FROM quest")
+            quests = cursor.fetchall()
+            quest_list = []
+            quest_dict = {}
+            for quest in quests:
+                app_name = quest[0]
+                maximum = ">" if quest[1] == 1 else "<"
+                time = quest[2]
+                quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        if quest_list:
+            self.quest_dropdown = ctk.CTkComboBox(self.bar_tab, values=quest_list)
+            self.quest_dropdown.pack(pady=5)
+
         self.add_progress_button = ctk.CTkButton(self.bar_tab, text="Add", command=self.add_progress_bar)
         self.add_progress_button.pack(pady=10)
 
@@ -182,24 +207,33 @@ class Tabview(ctk.CTkTabview):
         
 
     def add_progress_bar(self):
+        global quest_list, quest_list_update, quest_dict
         # Frame for each progress bar
         bar_frame = ctk.CTkFrame(self.progress_frame)
         bar_frame.pack(fill="x", pady=5)
 
-        # If there are quests, add a dropdown to select quest
         
-        if quest_list:
-            quest_dropdown = ctk.CTkComboBox(bar_frame, values=quest_list)
-            quest_dropdown.pack(pady=5)
 
-        # get the selected quest from the dropdown
-        selected_quest = quest_dropdown.get() if quest_list else None
+        # get the selected quest from dropdown out of the frame
+        selected_quest = self.quest_dropdown.get()
+        if selected_quest:
+            # Extract app name, maximum, and time from the selected quest
+            app_name, maximum_time = selected_quest.split(" : ")
+            maximum, time, unit = maximum_time.split(" ")
+            time = (float(time) * 60)
+            label_text = f"{app_name} : {maximum} {time / 60} hour"
+            # Create a label for the progress bar
+            label = ctk.CTkLabel(bar_frame, text=label_text)
+            label.pack(pady=5)
+        
+        
 
 
         # Progress bar
         progress_bar = ctk.CTkProgressBar(bar_frame)
         progress_bar.set(0)  # Set initial progress to 0%
         progress_bar.pack(fill="x", padx=5, pady=5)
+        bar_frame.progress_bar = progress_bar  # Store reference to the progress bar in the frame        
 
         
         increase_button = ctk.CTkButton(bar_frame, text="Increase", width=80, command=lambda: self.increase_progress(progress_bar))
@@ -222,19 +256,66 @@ class Tabview(ctk.CTkTabview):
         self.progress_bars.remove(bar_frame)
 
     def update_progress_bar(self,bar_frame):
-        global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update
-        max_map = {'>': 1, '<': 0}
-        time_map = {'1 hour': 60, '2 hours': 120, '3 hours': 180}
-        upper_limit = max_map.get(temp_quest_time[0])
-        minutes = time_map.get(temp_quest_time[1:])
-        name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
-        
-        bar_frame.text_label.configure(tSext=name) # config text label
-        bar_frame.progress_bar.set(minutes / 180) # set progress bar to 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
-        bar_frame.current_value = bar_frame.progress_bar.get()
-        # update progress bar with the quest time and maximum is upper_limit
-        
+        global quest_list
+        #change quest list to a str
+        quest_list_1 = str(quest_list)
+        # get the selected quest from dropdown out of the frame
+        selected_quest = self.quest_dropdown.get()
+        # if selected quest is in quest_list, extract quest_list
+        if selected_quest in quest_list_1:
+            app_name, maximum_time = selected_quest.split(" : ")
+            maximum, time, unit = maximum_time.split(" ")
 
+            # update progress bar, maximum_time == ">1 hour" means increase 0.1 for progress bar every 360 seconds, update every 360 seconds
+            if maximum_time == ">1 hour":
+                progress_bar = bar_frame.progress_bar
+                current_value = progress_bar.get()
+                new_value = min(current_value + 0.1, 1.0)
+                progress_bar.set(new_value)
+                # update the progress bar every 360 seconds
+                self.after(360000, lambda: self.update_progress_bar(bar_frame))
+            
+            # update progress bar, maximum_time == ">2 hour" means increase 0.1 for progress bar every 720 seconds, update every 720 seconds
+            elif maximum_time == ">2 hour":
+                progress_bar = bar_frame.progress_bar
+                current_value = progress_bar.get()
+                new_value = min(current_value + 0.1, 1.0)
+                progress_bar.set(new_value)
+                # update the progress bar every 720 seconds
+                self.after(720000, lambda: self.update_progress_bar(bar_frame))
+            
+            # update progress bar, maximum_time == ">3 hour" means increase 0.1 for progress bar every 1080 seconds, update every 1080 seconds
+            elif maximum_time == ">3 hour":
+                progress_bar = bar_frame.progress_bar
+                current_value = progress_bar.get()
+                new_value = min(current_value + 0.1, 1.0)
+                progress_bar.set(new_value)
+                # update the progress bar every 1080 seconds
+                self.after(1080000, lambda: self.update_progress_bar(bar_frame))
+            
+            # update progress bar, maximum_time == "<1 hour" means increase 0.1 for progress bar every 60 seconds, update every 60 seconds
+            elif maximum_time == "<1 hour":
+                progress_bar = bar_frame.progress_bar
+                current_value = progress_bar.get()
+                new_value = min(current_value + 0.1, 1.0)
+                progress_bar.set(new_value)
+                # update the progress bar every 60 seconds
+                self.after(60000, lambda: self.update_progress_bar(bar_frame))
+
+            # update progress bar, maximum_time == "<2 hour" means increase 0.1 for progress bar every 120 seconds, update every 120 seconds
+            elif maximum_time == "<2 hour":
+                progress_bar = bar_frame.progress_bar
+                current_value = progress_bar.get()
+                new_value = min(current_value + 0.1, 1.0)
+                progress_bar.set(new_value)
+                # update the progress bar every 120 seconds
+                self.after(120000, lambda: self.update_progress_bar(bar_frame))
+                
+
+
+                    
+        # update the progress bar every 1 second
+        self.after(1000, lambda: self.update_progress_bar(bar_frame))
         
         
         
@@ -470,14 +551,20 @@ class Tabview(ctk.CTkTabview):
         elif not self.stats_active and self.stats_thread and self.stats_thread.is_alive():
             # The thread will naturally pause in its while loop
             pass
-
+        
         #Bar Tab
         if self.bar_active and (self.bar_thread is None or not self.bar_thread.is_alive()):
-            self.bar_thread = threading.Thread(target=self.update_progress_bar, daemon=True)
+            self.bar_thread = threading.Thread(target=self.update_bar_tab, daemon=True)
             self.bar_thread.start()
         elif not self.bar_active and self.bar_thread and self.bar_thread.is_alive():
-            # The thread will naturally pause in its while loop
             pass
+
+    def update_bar_tab(self):
+        while self.bar_active:
+            for bar_frame in self.progress_bars:
+                self.update_progress_bar(bar_frame)
+            sleep(1)
+
             
 
     def tab_changed(self):
