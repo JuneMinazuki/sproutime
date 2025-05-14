@@ -162,19 +162,22 @@ class Tabview(ctk.CTkTabview):
         bar_frame = ctk.CTkFrame(self.progress_frame)
         bar_frame.pack(fill="x", pady=5)
 
-        # text above progress bar
-        text_label = ctk.CTkLabel(bar_frame, text="Progress Bar")
-        text_label.pack(pady=5)
+        # If there are quests, add a dropdown to select quest
+        
+        if quest_list:
+            quest_dropdown = ctk.CTkComboBox(bar_frame, values=quest_list)
+            quest_dropdown.pack(pady=5)
+
+        # get the selected quest from the dropdown
+        selected_quest = quest_dropdown.get() if quest_list else None
+
 
         # Progress bar
         progress_bar = ctk.CTkProgressBar(bar_frame)
         progress_bar.set(0)  # Set initial progress to 0%
         progress_bar.pack(fill="x", padx=5, pady=5)
 
-        # If there are quests, add a dropdown to select quest
-        if quest_list:
-            quest_dropdown = ctk.CTkComboBox(bar_frame, values=quest_list)
-            quest_dropdown.pack(pady=5)
+        
         increase_button = ctk.CTkButton(bar_frame, text="Increase", width=80, command=lambda: self.increase_progress(progress_bar))
         increase_button.pack(pady=5)
 
@@ -202,7 +205,7 @@ class Tabview(ctk.CTkTabview):
         minutes = time_map.get(temp_quest_time[1:])
         name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
         
-        bar_frame.text_label.configure(text=name) # config text label
+        bar_frame.text_label.configure(tSext=name) # config text label
         bar_frame.progress_bar.set(minutes / 180) # set progress bar to 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
         bar_frame.current_value = bar_frame.progress_bar.get()
         # update progress bar with the quest time and maximum is upper_limit
