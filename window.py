@@ -201,8 +201,10 @@ class Tabview(ctk.CTkTabview):
         self.quest_dropdown.pack(pady=10, padx=10)
         self.quest_dropdown.set(quest_list[0])  # Set default value
         
+        # Add Refresh Button for Progress Bar Tab
+        self.refresh_bar_button = ctk.CTkButton(self.bar_tab, text="Refresh", command=self.refresh_bar_tab)
+        self.refresh_bar_button.pack(pady=10)
 
-        
 
         
         
@@ -261,6 +263,49 @@ class Tabview(ctk.CTkTabview):
         delete_button.pack(pady=5)
 
         self.progress_bars.append(bar_frame)
+
+    def refresh_bar_tab(self):
+        # Remove all progress bars
+        for bar_frame in self.progress_bars:
+            bar_frame.destroy()
+        self.progress_bars.clear()
+
+        # Refresh quest list from database
+        global quest_list, quest_dict
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT app_name, maximum, time FROM quest")
+            quests = cursor.fetchall()
+            quest_list = []
+            quest_dict = {}
+            for quest in quests:
+                app_name = quest[0]
+                maximum = ">" if quest[1] == 1 else "<"
+                time = quest[2]
+                quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        # If quest_list is empty, set to "No quests available"
+        if not quest_list:
+            quest_list = ["No quests available"]
+
+        # Update dropdown values and reset selection
+        self.quest_dropdown.configure(values=quest_list)
+        self.quest_dropdown.set(quest_list[0])
+
+        # Enable/disable add button
+        if self.quest_dropdown.get() == "No quests available":
+            self.add_progress_button.configure(state="disabled")
+        else:
+            self.add_progress_button.configure(state="normal")
+        
+
         
 
     def increase_progress(self, progress_bar):
