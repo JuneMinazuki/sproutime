@@ -143,17 +143,22 @@ class Tabview(ctk.CTkTabview):
         self.time_spend_frame = ctk.CTkFrame(self.stat_frame)
         self.time_spend_frame.grid(row=0, column=1, padx=10, pady=5)
         
+        self.total_time_spend_frame = ctk.CTkFrame(self.stat_frame)
+        self.total_time_spend_frame.grid(row=0, column=3, padx=10, pady=5)
+        
         #Time Spend for Each App For 1 Week 
-        self.time_spend_label = ctk.CTkLabel(self.time_spend_frame, text="Time Spend for Each App:")
+        self.time_spend_label = ctk.CTkLabel(self.time_spend_frame, text="Time Spend for Each App In The Last Week:")
         self.time_spend_label.grid(row=0, column=0)
         
         self.time_spend_chart = DrawPieChart(self.time_spend_frame, {})
         self.time_spend_chart.grid(row=1, column=0)
         
         #Total Time Spend
-        self.total_time_spend_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
-        self.total_time_spend_TB.grid(row=0, column=3, padx=10, pady=20)
-        self.total_time_spend_TB.insert("end", 'Total Time Spend:\n')
+        self.total_time_spend_label = ctk.CTkLabel(self.total_time_spend_frame, text="Total Time Spend:")
+        self.total_time_spend_label.grid(row=0, column=0)
+        
+        self.total_time_spend_chart = DrawPieChart(self.total_time_spend_frame, {})
+        self.total_time_spend_chart.grid(row=1, column=0)
 
         #Total task complete since install
         self.task_complete_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
@@ -327,35 +332,12 @@ class Tabview(ctk.CTkTabview):
                     cursor.execute("SELECT app_name, duration FROM app_time WHERE date >= ?", (one_week_ago,))
                     app_time = cursor.fetchall()
                     
-<<<<<<< HEAD
                     time_dict = {}
                     for app_name, time in app_time:
                         if app_name in time_dict:
                             time_dict[app_name] += time
                         else:   
                             time_dict[app_name] = time
-=======
-                    self.time_spend_TB.delete("0.0", "end")
-                    self.time_spend_TB.insert("end", 'Time Spend for Each App:\n')
-                    
-                    for app in app_time:      
-                        minutes = app[1] // 60
-                        hours = minutes // 60
-                        remaining_minutes = minutes % 60
-                        
-                        if appname_dict and app[0] in old_name_list:
-                            appname = appname_dict[app[0]]
-                        else:
-                            appname = app[0]
-
-                        if not (minutes == 0):
-                            if remaining_minutes == 0:               
-                                self.time_spend_TB.insert("end", f'{appname} : {hours} hour(s)\n')
-                            elif hours == 0:
-                                self.time_spend_TB.insert("end", f'{appname} : {remaining_minutes} minute(s)\n')
-                            else:
-                                self.time_spend_TB.insert("end", f'{appname} : {hours} hour(s) and {remaining_minutes} minute(s)\n')
->>>>>>> main
                 
                     self.time_spend_chart.update_data(time_dict)
                     self.after(100, self.time_spend_chart._draw_chart)
@@ -364,26 +346,15 @@ class Tabview(ctk.CTkTabview):
                     cursor.execute("SELECT app_name, duration FROM app_time")
                     app_time = cursor.fetchall()
                     
-                    self.total_time_spend_TB.delete("0.0", "end")
-                    self.total_time_spend_TB.insert("end", 'Total Time Spend:\n')
-                    
-                    for app in app_time:       
-                        minutes = app[1] // 60
-                        hours = minutes // 60
-                        remaining_minutes = minutes % 60
-                        
-                        if appname_dict and app[0] in old_name_list:
-                            appname = appname_dict[app[0]]
-                        else:
-                            appname = app[0]
-
-                        if not (minutes == 0):
-                            if remaining_minutes == 0:               
-                                self.total_time_spend_TB.insert("end", f'{appname} : {hours} hour(s)\n')
-                            elif hours == 0:
-                                self.total_time_spend_TB.insert("end", f'{appname} : {remaining_minutes} minute(s)\n')
-                            else:
-                                self.total_time_spend_TB.insert("end", f'{appname} : {hours} hour(s) and {remaining_minutes} minute(s)\n')
+                    time_dict = {}
+                    for app_name, time in app_time:
+                        if app_name in time_dict:
+                            time_dict[app_name] += time
+                        else:   
+                            time_dict[app_name] = time
+                            
+                    self.total_time_spend_chart.update_data(time_dict)
+                    self.after(100, self.total_time_spend_chart._draw_chart)
                             
                     #Total task complete since install
                     cursor.execute("SELECT SUM(quest_completed), SUM(quest_set) FROM streak")
