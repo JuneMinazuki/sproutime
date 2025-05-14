@@ -1017,7 +1017,7 @@ def update_time():
                     cursor = conn.cursor()
                     
                     try:
-                        cursor.execute("DELETE FROM quest_completion WHERE app_name = ?", (app_name,))
+                        cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
                         conn.commit()
                     except sqlite3.Error as e:
                         if DEBUG: print(f"An error occurred: {e}")
