@@ -39,6 +39,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_thread = None
         self.score_thread = None
         self.stats_thread = None
+        self.bar_thread = None
 
         #Create widget
         self.create_progress_widgets()
@@ -186,8 +187,52 @@ class Tabview(ctk.CTkTabview):
 
     def create_bar_widgets(self):
         self.bar_tab = self.add("Progress Bar")
+        # get data from database
+        global quest_list_update, quest_list,quest_dict
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT app_name, maximum, time FROM quest")
+            quests = cursor.fetchall()
+            quest_list = []
+            quest_dict = {}
+            for quest in quests:
+                app_name = quest[0]
+                maximum = ">" if quest[1] == 1 else "<"
+                time = quest[2]
+                quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        # if quest_list is empty, set to "No quests available" until not empty and updated to dropdown
+        if not quest_list:
+            quest_list = ["No quests available"]
+        #Quest Option
+        self.quest_dropdown = ctk.CTkComboBox(self.bar_tab, values=quest_list, command=self.combobox_callback)
+        self.quest_dropdown.pack(pady=10, padx=10)
+        self.quest_dropdown.set(quest_list[0])  # Set default value
+        
+        # Add Refresh Button for Progress Bar Tab
+        self.refresh_bar_button = ctk.CTkButton(self.bar_tab, text="Refresh", command=self.refresh_bar_tab)
+        self.refresh_bar_button.pack(pady=10)
+
+
+        
+        
+        
+        
+        #Add Progress Bar Button
         self.add_progress_button = ctk.CTkButton(self.bar_tab, text="Add", command=self.add_progress_bar)
         self.add_progress_button.pack(pady=10)
+        # if quest_dropdown choose "No quests available", disable the button
+        if self.quest_dropdown.get() == "No quests available":
+            self.add_progress_button.configure(state="disabled")
+        else:
+            self.add_progress_button.configure(state="normal")
 
         self.progress_frame = ctk.CTkFrame(self.bar_tab)
         self.progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -195,20 +240,35 @@ class Tabview(ctk.CTkTabview):
         self.progress_bars = []
         
     def add_progress_bar(self):
+        global quest_list, quest_list_update, quest_dict
         # Frame for each progress bar
         bar_frame = ctk.CTkFrame(self.progress_frame)
         bar_frame.pack(fill="x", pady=5)
 
-        # Editable text above progress bar
-        text_entry = ctk.CTkEntry(bar_frame, placeholder_text="Enter text here")
-        text_entry.pack(anchor="w", fill="x", padx=5, pady=2)
+        
+
+        # get the selected quest from dropdown out of the frame
+        selected_quest = self.quest_dropdown.get()
+        if selected_quest:
+            # Extract app name, maximum, and time from the selected quest
+            app_name, maximum_time = selected_quest.split(" : ")
+            maximum, time, unit = maximum_time.split(" ")
+            time = (float(time) * 60)
+            label_text = f"{app_name} : {maximum} {time / 60} hour"
+            # Create a label for the progress bar
+            label = ctk.CTkLabel(bar_frame, text=label_text)
+            label.pack(pady=5)
+        
+        
+
 
         # Progress bar
         progress_bar = ctk.CTkProgressBar(bar_frame)
-        progress_bar.set(0.1)  # Set initial progress to 10%
+        progress_bar.set(0)  # Set initial progress to 0%
         progress_bar.pack(fill="x", padx=5, pady=5)
+        bar_frame.progress_bar = progress_bar  # Store reference to the progress bar in the frame        
 
-        # Increase progress button
+        
         increase_button = ctk.CTkButton(bar_frame, text="Increase", width=80, command=lambda: self.increase_progress(progress_bar))
         increase_button.pack(pady=5)
 
@@ -217,6 +277,49 @@ class Tabview(ctk.CTkTabview):
         delete_button.pack(pady=5)
 
         self.progress_bars.append(bar_frame)
+        
+
+    def refresh_bar_tab(self):
+        # Remove all progress bars
+        for bar_frame in self.progress_bars:
+            bar_frame.destroy()
+        self.progress_bars.clear()
+
+        # Refresh quest list from database
+        global quest_list, quest_dict
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT app_name, maximum, time FROM quest")
+            quests = cursor.fetchall()
+            quest_list = []
+            quest_dict = {}
+            for quest in quests:
+                app_name = quest[0]
+                maximum = ">" if quest[1] == 1 else "<"
+                time = quest[2]
+                quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        # If quest_list is empty, set to "No quests available"
+        if not quest_list:
+            quest_list = ["No quests available"]
+
+        # Update dropdown values and reset selection
+        self.quest_dropdown.configure(values=quest_list)
+        self.quest_dropdown.set(quest_list[0])
+
+        # Re-enable the add button if there are quests available
+        if self.quest_dropdown.get() == "No quests available":
+            self.add_progress_button.configure(state="disabled")
+        else:
+            self.add_progress_button.configure(state="normal")
+        
 
     def increase_progress(self, progress_bar):
         current_value = progress_bar.get()
@@ -226,6 +329,32 @@ class Tabview(ctk.CTkTabview):
     def delete_progress_bar(self, bar_frame):
         bar_frame.destroy()
         self.progress_bars.remove(bar_frame)
+
+    def update_progress_bar(self,bar_frame):
+        
+        selected_quest = self.quest_dropdown.get()
+        # if selected quest is in quest_list, extract quest_list
+        if selected_quest:
+            app_name, maximum_time = selected_quest.split(" : ")
+            maximum, time, unit = maximum_time.split(" ")
+            time = (float(time) * 60)
+            # get the current progress of the bar
+            current_value = bar_frame.progress_bar.get()
+            # calculate the new value until it reaches max (1.0) using do until
+            if current_value < 1.0:
+                new_value = min(current_value + (1.0 / time), 1.0)  # increase by 1% of the total time
+                bar_frame.progress_bar.set(new_value)
+                # if the progress bar reaches 100%, show a message box
+            
+           
+            
+        
+                    
+                    
+  
+
+    
+
 
     def update_progress(self):
         global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list
@@ -416,6 +545,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_active = tab == "Quest"
         self.score_active = tab == "Score"
         self.stats_active = tab == "Stats"
+        self.bar_active = tab == "Progress Bar"
 
         #Progess Tab
         if self.progress_active and (self.progress_thread is None or not self.progress_thread.is_alive()):
@@ -448,6 +578,21 @@ class Tabview(ctk.CTkTabview):
         elif not self.stats_active and self.stats_thread and self.stats_thread.is_alive():
             # The thread will naturally pause in its while loop
             pass
+        
+        #Bar Tab
+        if self.bar_active and (self.bar_thread is None or not self.bar_thread.is_alive()):
+            self.bar_thread = threading.Thread(target=self.update_bar_tab, daemon=True)
+            self.bar_thread.start()
+        elif not self.bar_active and self.bar_thread and self.bar_thread.is_alive():
+            pass
+
+    def update_bar_tab(self):
+        while self.bar_active:
+            for bar_frame in self.progress_bars:
+                self.update_progress_bar(bar_frame)
+            sleep(1)
+
+            
 
     def tab_changed(self):
         self.start_updating()
