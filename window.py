@@ -291,10 +291,6 @@ class Tabview(ctk.CTkTabview):
         progress_bar.pack(fill="x", padx=5, pady=5)
         bar_frame.progress_bar = progress_bar  # Store reference to the progress bar in the frame        
 
-        
-        increase_button = ctk.CTkButton(bar_frame, text="Increase", width=80, command=lambda: self.increase_progress(progress_bar))
-        increase_button.pack(pady=5)
-
         # Delete button
         delete_button = ctk.CTkButton(bar_frame, text="Delete", width=80, command=lambda: self.delete_progress_bar(bar_frame))
         delete_button.pack(pady=5)
@@ -342,12 +338,6 @@ class Tabview(ctk.CTkTabview):
             self.add_progress_button.configure(state="disabled")
         else:
             self.add_progress_button.configure(state="normal")
-        
-
-    def increase_progress(self, progress_bar):
-        current_value = progress_bar.get()
-        new_value = min(current_value + 0.1, 1.0)  # initial progress to 10%, max is 100%
-        progress_bar.set(new_value)
 
     def delete_progress_bar(self, bar_frame):
         bar_frame.destroy()
