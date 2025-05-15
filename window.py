@@ -813,7 +813,7 @@ class DrawPieChart(ctk.CTkFrame):
         radius = min(center_x, center_y) - 20
 
         if len(self.data.items()) > 1:
-            for i, (label, value) in enumerate(self.data.items()):
+            for i, (_, value) in enumerate(self.data.items()):
                 angle = (value / total) * 360
 
                 # Draw the arc (slice)
@@ -831,6 +831,10 @@ class DrawPieChart(ctk.CTkFrame):
                 )
                 start_angle += angle
         else:  # Handle the case where there's only one data item.
+            _, value = enumerate(self.data.items())[0]
+            if value < 60:
+                return
+            
             i = 0
             x0 = center_x - radius
             y0 = center_y - radius
