@@ -782,17 +782,19 @@ class DrawPieChart(ctk.CTkFrame):
 
     def _create_widgets(self):
         # Pack the pie chart into a frame
-        self.pie_frame = ctk.CTkFrame(self, width=610, height=260, fg_color='#323232') # increased pie_frame width
+        self.pie_frame = ctk.CTkFrame(self, width=610, height=260, fg_color='#323232')
         self.pie_frame.grid(row=0, column=0, sticky="nsew")
 
         # Create a canvas widget for the pie chart
-        self.canvas = ctk.CTkCanvas(self.pie_frame, width=290, height=260, highlightthickness=0)
-        self.canvas.pack(side="left", padx=10, pady=10) # Use pack for single element in frame
+        canvas_width = 260
+        canvas_height = 260
+        self.canvas = ctk.CTkCanvas(self.pie_frame, width=canvas_width, height=canvas_height, highlightthickness=0)
+        self.canvas.pack(side="left", padx=10, pady=10)
 
         # Create a frame for the legend
-        legend_frame = ctk.CTkFrame(self.pie_frame, width=300, height=260) 
+        legend_frame = ctk.CTkFrame(self.pie_frame, width=300, height=260)
         legend_frame.pack(side="right", padx=5, pady=10, fill="y")
-        legend_frame.grid_propagate(False) 
+        legend_frame.grid_propagate(False)  # Prevent the frame from resizing with content
 
         # Create a scrollable container for the legend items
         self.legend_scrollable_frame = ctk.CTkScrollableFrame(legend_frame, height=240)
@@ -810,38 +812,47 @@ class DrawPieChart(ctk.CTkFrame):
         center_y = canvas_height / 2
         radius = min(center_x, center_y) - 20
 
-        for i, (label, value) in enumerate(self.data.items()):
-            angle = (value / total) * 360
+        if len(self.data.items()) > 1:
+            for i, (label, value) in enumerate(self.data.items()):
+                angle = (value / total) * 360
 
-            # Draw the arc (slice)
-            self.canvas.create_arc(
-                center_x - radius,
-                center_y - radius,
-                center_x + radius,
-                center_y + radius,
-                start=start_angle,
-                extent=angle,
-                fill=self.colors[i % len(self.colors)],
-                outline="black",
-                width=1,
-                tags="pie_slice"  # Add a tag to identify slices
-            )
-            start_angle += angle
+                # Draw the arc (slice)
+                self.canvas.create_arc(
+                    center_x - radius,
+                    center_y - radius,
+                    center_x + radius,
+                    center_y + radius,
+                    start=start_angle,
+                    extent=angle,
+                    fill=self.colors[i % len(self.colors)],
+                    outline="black",
+                    width=1,
+                    tags="pie_slice"  # Add a tag to identify slices
+                )
+                start_angle += angle
+        else:  # Handle the case where there's only one data item.
+            i = 0
+            label, value = next(iter(self.data.items())) # get first key, value pair.
+            x0 = center_x - radius
+            y0 = center_y - radius
+            x1 = center_x + radius
+            y1 = center_y + radius
+
+            self.canvas.create_oval(x0, y0, x1, y1, fill=self.colors[i % len(self.colors)], outline="black", width=1)
 
     def _create_legend(self):
         # Clear previous legend items
         for widget in self.legend_scrollable_frame.winfo_children():
-            widget.pack_forget() 
-        
+            widget.pack_forget()
+
         for i, (label, value) in enumerate(self.data.items()):
+            time = 0
             minutes = value // 60
             hours = minutes // 60
             remaining_minutes = minutes % 60
 
-            if minutes == 0:
-                continue
-            else:
-                if remaining_minutes == 0: 
+            if not (minutes == 0):
+                if remaining_minutes == 0:
                     time = f'{hours} hour(s)'
                 elif hours == 0:
                     time = f'{remaining_minutes} minute(s)'
@@ -871,7 +882,7 @@ class DrawPieChart(ctk.CTkFrame):
     def _draw_chart(self):
         self._draw_pie_chart()
         self._create_legend()
-        
+
     def update_data(self, new_data):
         self.data = new_data
         self._draw_chart()
