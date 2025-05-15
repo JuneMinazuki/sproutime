@@ -812,8 +812,8 @@ class DrawPieChart(ctk.CTkFrame):
         center_y = canvas_height / 2
         radius = min(center_x, center_y) - 20
 
-        if len(self.data.items()) > 1:
-            for i, (_, value) in enumerate(self.data.items()):
+        for i, (_, value) in enumerate(self.data.items()):
+            if len(self.data.items()) > 1:
                 angle = (value / total) * 360
 
                 # Draw the arc (slice)
@@ -827,21 +827,20 @@ class DrawPieChart(ctk.CTkFrame):
                     fill=self.colors[i % len(self.colors)],
                     outline="black",
                     width=1,
-                    tags="pie_slice"  # Add a tag to identify slices
+                    tags="pie_slice" 
                 )
                 start_angle += angle
-        else:  # Handle the case where there's only one data item.
-            _, value = enumerate(self.data.items())[0]
-            if value < 60:
-                return
-            
-            i = 0
-            x0 = center_x - radius
-            y0 = center_y - radius
-            x1 = center_x + radius
-            y1 = center_y + radius
-
-            self.canvas.create_oval(x0, y0, x1, y1, fill=self.colors[i % len(self.colors)], outline="black", width=1)
+            else:  # Handle the case where there's only one data item.
+                i = 0
+                x0 = center_x - radius
+                y0 = center_y - radius
+                x1 = center_x + radius
+                y1 = center_y + radius
+                
+                if value > 60:
+                    self.canvas.create_oval(x0, y0, x1, y1, fill=self.colors[i % len(self.colors)], outline="black", width=1)
+                else:
+                    self.canvas.create_oval(x0, y0, x1, y1, fill="grey", outline="black", width=1)
 
     def _create_legend(self):
         # Clear previous legend items
