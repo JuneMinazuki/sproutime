@@ -832,7 +832,6 @@ class DrawPieChart(ctk.CTkFrame):
                 start_angle += angle
         else:  # Handle the case where there's only one data item.
             i = 0
-            label, value = next(iter(self.data.items())) # get first key, value pair.
             x0 = center_x - radius
             y0 = center_y - radius
             x1 = center_x + radius
