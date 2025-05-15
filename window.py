@@ -572,8 +572,10 @@ class Tabview(ctk.CTkTabview):
                                 count = 0
                     longest_streak = max(longest_streak, count)
                     self.longest_streak_label.configure(text=f'Longest Streak: {longest_streak}')
-                    
-                    self.streak_bar.set(current_streak / longest_streak)
+                    if longest_streak == 0:
+                        self.streak_bar.set(0)
+                    else:
+                        self.streak_bar.set(current_streak / longest_streak)
                     self.update_idletasks()
                     day_left = longest_streak - current_streak
                     self.streak_label.configure(text=f'{day_left} more day(s) to go!')
