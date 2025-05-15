@@ -147,23 +147,36 @@ class Tabview(ctk.CTkTabview):
         self.total_time_spend_frame = ctk.CTkFrame(self.stat_frame)
         self.total_time_spend_frame.grid(row=0, column=3, padx=10, pady=5)
         
+        self.task_complete_frame = ctk.CTkFrame(self.stat_frame)
+        self.task_complete_frame.grid(row=1, column=1, padx=10, pady=5)
+        
         #Time Spend for Each App For 1 Week 
         self.time_spend_label = ctk.CTkLabel(self.time_spend_frame, text="Time Spend for Each App In The Last Week:")
-        self.time_spend_label.grid(row=0, column=0)
+        self.time_spend_label.pack()
         
         self.time_spend_chart = DrawPieChart(self.time_spend_frame, {})
-        self.time_spend_chart.grid(row=1, column=0)
+        self.time_spend_chart.pack()
         
         #Total Time Spend
         self.total_time_spend_label = ctk.CTkLabel(self.total_time_spend_frame, text="Total Time Spend:")
-        self.total_time_spend_label.grid(row=0, column=0)
+        self.total_time_spend_label.pack()
         
         self.total_time_spend_chart = DrawPieChart(self.total_time_spend_frame, {})
-        self.total_time_spend_chart.grid(row=1, column=0)
+        self.total_time_spend_chart.pack()
 
         #Total task complete since install
-        self.task_complete_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
-        self.task_complete_TB.grid(row=1, column=1, padx=10, pady=20)
+        self.task_complete_label = ctk.CTkLabel(self.task_complete_frame, text="Total Task Completed:", anchor="w")
+        self.task_complete_label.pack(fill="x", padx=20, pady=(10,5))
+        
+        self.task_missed_label = ctk.CTkLabel(self.task_complete_frame, text="Total Task Missed:", anchor="w")
+        self.task_missed_label.pack(fill="x", padx=20, pady=5)
+        
+        self.percentage_bar = ctk.CTkProgressBar(self.task_complete_frame, mode="determinate", height=15, width=500, progress_color='#76d169')
+        self.percentage_bar.pack(padx=20, pady=(50,0))
+        self.percentage_bar.set(0)
+        
+        self.percentage_label = ctk.CTkLabel(self.task_complete_frame, text="% of task completed")
+        self.percentage_label.pack(fill="x", padx=20, pady=5)
         
         #Longest/Current streak
         self.longest_streak_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
@@ -220,11 +233,6 @@ class Tabview(ctk.CTkTabview):
         self.refresh_bar_button = ctk.CTkButton(self.bar_tab, text="Refresh", command=self.refresh_bar_tab)
         self.refresh_bar_button.pack(pady=10)
 
-
-        
-        
-        
-        
         #Add Progress Bar Button
         self.add_progress_button = ctk.CTkButton(self.bar_tab, text="Add", command=self.add_progress_bar)
         self.add_progress_button.pack(pady=10)
@@ -244,9 +252,7 @@ class Tabview(ctk.CTkTabview):
         # Frame for each progress bar
         bar_frame = ctk.CTkFrame(self.progress_frame)
         bar_frame.pack(fill="x", pady=5)
-
         
-
         # get the selected quest from dropdown out of the frame
         selected_quest = self.quest_dropdown.get()
         if selected_quest:
@@ -336,14 +342,35 @@ class Tabview(ctk.CTkTabview):
         # if selected quest is in quest_list, extract quest_list
         if selected_quest:
             app_name, maximum_time = selected_quest.split(" : ")
-            maximum, time, unit = maximum_time.split(" ")
-            time = (float(time) * 60)
+            maximum, time, _ = maximum_time.split(" ")
+            time = (float(time) * 3600)
+            current_time = 0
+            
+            conn = sqlite3.connect('sproutime.db')
+            cursor = conn.cursor()
+                
+            try:
+                cursor.execute("SELECT duration FROM app_time WHERE date = ? AND app_name = ?", (str(date.today()), app_name))
+                duration = cursor.fetchone()
+                
+                if duration and duration[0] is not None:
+                    current_time = duration[0]
+            except sqlite3.Error as e:
+                if DEBUG: print(f"An error occurred: {e}")
+                conn.rollback()
+            finally:
+                if conn:
+                    conn.close()
+            
             # get the current progress of the bar
             current_value = bar_frame.progress_bar.get()
+            print(current_value)
+            
             # calculate the new value until it reaches max (1.0) using do until
             if current_value < 1.0:
-                new_value = min(current_value + (1.0 / time), 1.0)  # increase by 1% of the total time
+                new_value = current_time / time  # increase by 1% of the total time
                 bar_frame.progress_bar.set(new_value)
+                self.update_idletasks()
                 # if the progress bar reaches 100%, show a message box
             
            
@@ -488,17 +515,19 @@ class Tabview(ctk.CTkTabview):
                     #Total task complete since install
                     cursor.execute("SELECT SUM(quest_completed), SUM(quest_set) FROM streak")
                     task = cursor.fetchone()
-
-                    self.task_complete_TB.delete("0.0", "end")
                     
                     if (task) and (task[0] is not None) and (task[1] is not None):
-                        self.task_complete_TB.insert("end", f'Total Task Completed: {task[0]}\n')
-                        self.task_complete_TB.insert("end", f'Total Task Missed: {task[1] - task[0]}\n\n')
+                        self.task_complete_label.configure(text=f'Total Task Completed: {task[0]}')
+                        self.task_missed_label.configure(text=f'Total Task Missed: {task[1] - task[0]}')
                         
                         if task[1] == 0:
-                            self.task_complete_TB.insert("end", '0% of task completed\n')
+                            percentage = 0
                         else:
-                            self.task_complete_TB.insert("end", f'{"{:.2f}".format(task[0] / task[1] * 100)}% of task completed\n')
+                            percentage = float("{:.2f}".format(task[0] / task[1] * 100))
+                            
+                        self.percentage_bar.set(percentage / 100.0)
+                        self.update_idletasks()
+                        self.percentage_label.configure(text=f'{percentage}% of task completed')
                     
                     #Longest/Current streak
                     current_streak = 0
@@ -752,15 +781,13 @@ class DrawPieChart(ctk.CTkFrame):
         self.pie_frame.grid(row=0, column=0, sticky="nsew")
 
         # Create a canvas widget for the pie chart
-        canvas_width = 260
-        canvas_height = 260
-        self.canvas = ctk.CTkCanvas(self.pie_frame, width=canvas_width, height=canvas_height, highlightthickness=0)
+        self.canvas = ctk.CTkCanvas(self.pie_frame, width=290, height=260, highlightthickness=0)
         self.canvas.pack(side="left", padx=10, pady=10) # Use pack for single element in frame
 
         # Create a frame for the legend
-        legend_frame = ctk.CTkFrame(self.pie_frame, width=300, height=260) # Increased legend_frame width to 300
+        legend_frame = ctk.CTkFrame(self.pie_frame, width=300, height=260) 
         legend_frame.pack(side="right", padx=5, pady=10, fill="y")
-        legend_frame.grid_propagate(False)  # Prevent the frame from resizing with content
+        legend_frame.grid_propagate(False) 
 
         # Create a scrollable container for the legend items
         self.legend_scrollable_frame = ctk.CTkScrollableFrame(legend_frame, height=240)
@@ -863,7 +890,7 @@ class DebugMenu(ctk.CTkToplevel):
         self.time_speed_label = ctk.CTkLabel(master=self, text="Speed Up")
         self.time_speed_label.grid(row=0, column=0, padx=20, pady=10, sticky='w')
         self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text='', variable=_d_time_speed,
-                                                    onvalue=300, offvalue=1, width=10)
+                                                    onvalue=3600, offvalue=1, width=10)
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
         
         #Clear quest
