@@ -146,6 +146,9 @@ class Tabview(ctk.CTkTabview):
         self.total_time_spend_frame = ctk.CTkFrame(self.stat_frame)
         self.total_time_spend_frame.grid(row=0, column=3, padx=10, pady=5)
         
+        self.task_complete_frame = ctk.CTkFrame(self.stat_frame)
+        self.task_complete_frame.grid(row=1, column=1, padx=10, pady=5)
+        
         #Time Spend for Each App For 1 Week 
         self.time_spend_label = ctk.CTkLabel(self.time_spend_frame, text="Time Spend for Each App In The Last Week:")
         self.time_spend_label.grid(row=0, column=0)
@@ -161,8 +164,8 @@ class Tabview(ctk.CTkTabview):
         self.total_time_spend_chart.grid(row=1, column=0)
 
         #Total task complete since install
-        self.task_complete_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
-        self.task_complete_TB.grid(row=1, column=1, padx=10, pady=20)
+        self.task_complete_TB = ctk.CTkTextbox(self.task_complete_frame, width=540, height=260)
+        self.task_complete_TB.grid(row=1, column=1)
         
         #Longest/Current streak
         self.longest_streak_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
@@ -607,15 +610,13 @@ class DrawPieChart(ctk.CTkFrame):
         self.pie_frame.grid(row=0, column=0, sticky="nsew")
 
         # Create a canvas widget for the pie chart
-        canvas_width = 260
-        canvas_height = 260
-        self.canvas = ctk.CTkCanvas(self.pie_frame, width=canvas_width, height=canvas_height, highlightthickness=0)
+        self.canvas = ctk.CTkCanvas(self.pie_frame, width=290, height=260, highlightthickness=0)
         self.canvas.pack(side="left", padx=10, pady=10) # Use pack for single element in frame
 
         # Create a frame for the legend
-        legend_frame = ctk.CTkFrame(self.pie_frame, width=300, height=260) # Increased legend_frame width to 300
+        legend_frame = ctk.CTkFrame(self.pie_frame, width=300, height=260) 
         legend_frame.pack(side="right", padx=5, pady=10, fill="y")
-        legend_frame.grid_propagate(False)  # Prevent the frame from resizing with content
+        legend_frame.grid_propagate(False) 
 
         # Create a scrollable container for the legend items
         self.legend_scrollable_frame = ctk.CTkScrollableFrame(legend_frame, height=240)
