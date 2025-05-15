@@ -337,6 +337,7 @@ class Tabview(ctk.CTkTabview):
         self.progress_bars.remove(bar_frame)
 
     def update_progress_bar(self,bar_frame):
+        global app_dict
         
         selected_quest = self.quest_dropdown.get()
         # if selected quest is in quest_list, extract quest_list
@@ -344,27 +345,14 @@ class Tabview(ctk.CTkTabview):
             app_name, maximum_time = selected_quest.split(" : ")
             maximum, time, _ = maximum_time.split(" ")
             time = (float(time) * 3600)
-            current_time = 0
             
-            conn = sqlite3.connect('sproutime.db')
-            cursor = conn.cursor()
-                
-            try:
-                cursor.execute("SELECT duration FROM app_time WHERE date = ? AND app_name = ?", (str(date.today()), app_name))
-                duration = cursor.fetchone()
-                
-                if duration and duration[0] is not None:
-                    current_time = duration[0]
-            except sqlite3.Error as e:
-                if DEBUG: print(f"An error occurred: {e}")
-                conn.rollback()
-            finally:
-                if conn:
-                    conn.close()
+            if app_name in app_dict:
+                current_time = app_dict[app_name]
+            else:
+                current_time = 0
             
             # get the current progress of the bar
             current_value = bar_frame.progress_bar.get()
-            print(current_value)
             
             # calculate the new value until it reaches max (1.0) using do until
             if current_value < 1.0:
