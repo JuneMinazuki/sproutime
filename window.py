@@ -263,6 +263,7 @@ class Tabview(ctk.CTkTabview):
         delete_button.pack(pady=5)
 
         self.progress_bars.append(bar_frame)
+        
 
     def refresh_bar_tab(self):
         # Remove all progress bars
@@ -299,13 +300,11 @@ class Tabview(ctk.CTkTabview):
         self.quest_dropdown.configure(values=quest_list)
         self.quest_dropdown.set(quest_list[0])
 
-        # Enable/disable add button
+        # Re-enable the add button if there are quests available
         if self.quest_dropdown.get() == "No quests available":
             self.add_progress_button.configure(state="disabled")
         else:
             self.add_progress_button.configure(state="normal")
-        
-
         
 
     def increase_progress(self, progress_bar):
@@ -318,68 +317,23 @@ class Tabview(ctk.CTkTabview):
         self.progress_bars.remove(bar_frame)
 
     def update_progress_bar(self,bar_frame):
-        global quest_list
-        #change quest list to a str
-        quest_list_1 = str(quest_list)
-        # get the selected quest from dropdown out of the frame
+        
         selected_quest = self.quest_dropdown.get()
         # if selected quest is in quest_list, extract quest_list
-        if selected_quest in quest_list_1:
+        if selected_quest:
             app_name, maximum_time = selected_quest.split(" : ")
             maximum, time, unit = maximum_time.split(" ")
-
-            # update progress bar, maximum_time == ">1 hour" means increase 0.1 for progress bar every 360 seconds, update every 360 seconds
-            if maximum_time == ">1 hour":
-                progress_bar = bar_frame.progress_bar
-                current_value = progress_bar.get()
-                new_value = min(current_value + 0.1, 1.0)
-                progress_bar.set(new_value)
-                # update the progress bar every 360 seconds
-                self.after(360000, lambda: self.update_progress_bar(bar_frame))
+            time = (float(time) * 60)
+            # get the current progress of the bar
+            current_value = bar_frame.progress_bar.get()
+            # calculate the new value until it reaches max (1.0) using do until
+            if current_value < 1.0:
+                new_value = min(current_value + (1.0 / time), 1.0)  # increase by 1% of the total time
+                bar_frame.progress_bar.set(new_value)
+                # if the progress bar reaches 100%, show a message box
             
-            # update progress bar, maximum_time == ">2 hour" means increase 0.1 for progress bar every 720 seconds, update every 720 seconds
-            elif maximum_time == ">2 hour":
-                progress_bar = bar_frame.progress_bar
-                current_value = progress_bar.get()
-                new_value = min(current_value + 0.1, 1.0)
-                progress_bar.set(new_value)
-                # update the progress bar every 720 seconds
-                self.after(720000, lambda: self.update_progress_bar(bar_frame))
+           
             
-            # update progress bar, maximum_time == ">3 hour" means increase 0.1 for progress bar every 1080 seconds, update every 1080 seconds
-            elif maximum_time == ">3 hour":
-                progress_bar = bar_frame.progress_bar
-                current_value = progress_bar.get()
-                new_value = min(current_value + 0.1, 1.0)
-                progress_bar.set(new_value)
-                # update the progress bar every 1080 seconds
-                self.after(1080000, lambda: self.update_progress_bar(bar_frame))
-            
-            # update progress bar, maximum_time == "<1 hour" means increase 0.1 for progress bar every 60 seconds, update every 60 seconds
-            elif maximum_time == "<1 hour":
-                progress_bar = bar_frame.progress_bar
-                current_value = progress_bar.get()
-                new_value = min(current_value + 0.1, 1.0)
-                progress_bar.set(new_value)
-                # update the progress bar every 60 seconds
-                self.after(60000, lambda: self.update_progress_bar(bar_frame))
-
-            # update progress bar, maximum_time == "<2 hour" means increase 0.1 for progress bar every 120 seconds, update every 120 seconds
-            elif maximum_time == "<2 hour":
-                progress_bar = bar_frame.progress_bar
-                current_value = progress_bar.get()
-                new_value = min(current_value + 0.1, 1.0)
-                progress_bar.set(new_value)
-                # update the progress bar every 120 seconds
-                self.after(120000, lambda: self.update_progress_bar(bar_frame))
-                
-
-
-                    
-        # update the progress bar every 1 second
-        self.after(1000, lambda: self.update_progress_bar(bar_frame))
-        
-        
         
                     
                     
