@@ -868,25 +868,25 @@ class DrawPieChart(ctk.CTkFrame):
                 else:
                     time= f'{hours} hour(s) & {remaining_minutes} minute(s)'
 
-            # Create a frame for each legend item (color + text)
-            legend_item_frame = ctk.CTkFrame(self.legend_scrollable_frame, fg_color="transparent")
-            legend_item_frame.pack(pady=(0, 10), fill="x")  # Added some padding between items
+                # Create a frame for each legend item (color + text)
+                legend_item_frame = ctk.CTkFrame(self.legend_scrollable_frame, fg_color="transparent")
+                legend_item_frame.pack(pady=(0, 10), fill="x")  # Added some padding between items
 
-            # Create the color box and label container
-            color_label_container = ctk.CTkFrame(legend_item_frame, fg_color="transparent")
-            color_label_container.pack(side="top", fill="x")
+                # Create the color box and label container
+                color_label_container = ctk.CTkFrame(legend_item_frame, fg_color="transparent")
+                color_label_container.pack(side="top", fill="x")
 
-            # Create the color box
-            legend_color_box = ctk.CTkLabel(color_label_container, text="", width=20, height=20, bg_color=self.colors[i % len(self.colors)], fg_color=self.colors[i % len(self.colors)])
-            legend_color_box.pack(side="left", padx=(5, 10))  # Reduced horizontal padding
+                # Create the color box
+                legend_color_box = ctk.CTkLabel(color_label_container, text="", width=20, height=20, bg_color=self.colors[i % len(self.colors)], fg_color=self.colors[i % len(self.colors)])
+                legend_color_box.pack(side="left", padx=(5, 10))  # Reduced horizontal padding
 
-            # Create the label (Fruit Name)
-            legend_label = ctk.CTkLabel(color_label_container, text=f"{label}:", anchor="w")
-            legend_label.pack(side="left", fill="x", expand=True, padx=(0, 20))
+                # Create the label (Fruit Name)
+                legend_label = ctk.CTkLabel(color_label_container, text=f"{label}:", anchor="w")
+                legend_label.pack(side="left", fill="x", expand=True, padx=(0, 20))
 
-            # Create the value label below
-            legend_value_label = ctk.CTkLabel(legend_item_frame, text=f"{time}", anchor="w")
-            legend_value_label.pack(side="top", fill="x", padx=(35, 10))  # Indent to align under the value
+                # Create the value label below
+                legend_value_label = ctk.CTkLabel(legend_item_frame, text=f"{time}", anchor="w")
+                legend_value_label.pack(side="top", fill="x", padx=(35, 10))  # Indent to align under the value
 
     def _draw_chart(self):
         self._draw_pie_chart()
