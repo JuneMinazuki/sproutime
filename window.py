@@ -151,21 +151,31 @@ class Tabview(ctk.CTkTabview):
         
         #Time Spend for Each App For 1 Week 
         self.time_spend_label = ctk.CTkLabel(self.time_spend_frame, text="Time Spend for Each App In The Last Week:")
-        self.time_spend_label.grid(row=0, column=0)
+        self.time_spend_label.pack()
         
         self.time_spend_chart = DrawPieChart(self.time_spend_frame, {})
-        self.time_spend_chart.grid(row=1, column=0)
+        self.time_spend_chart.pack()
         
         #Total Time Spend
         self.total_time_spend_label = ctk.CTkLabel(self.total_time_spend_frame, text="Total Time Spend:")
-        self.total_time_spend_label.grid(row=0, column=0)
+        self.total_time_spend_label.pack()
         
         self.total_time_spend_chart = DrawPieChart(self.total_time_spend_frame, {})
-        self.total_time_spend_chart.grid(row=1, column=0)
+        self.total_time_spend_chart.pack()
 
         #Total task complete since install
-        self.task_complete_TB = ctk.CTkTextbox(self.task_complete_frame, width=540, height=260)
-        self.task_complete_TB.grid(row=1, column=1)
+        self.task_complete_label = ctk.CTkLabel(self.task_complete_frame, text="Total Task Completed:", anchor="w")
+        self.task_complete_label.pack(fill="x", padx=20, pady=(10,5))
+        
+        self.task_missed_label = ctk.CTkLabel(self.task_complete_frame, text="Total Task Missed:", anchor="w")
+        self.task_missed_label.pack(fill="x", padx=20, pady=5)
+        
+        self.percentage_bar = ctk.CTkProgressBar(self.task_complete_frame, mode="determinate", height=15, width=500, progress_color='#76d169')
+        self.percentage_bar.pack(padx=20, pady=(50,0))
+        self.percentage_bar.set(0)
+        
+        self.percentage_label = ctk.CTkLabel(self.task_complete_frame, text="% of task completed")
+        self.percentage_label.pack(fill="x", padx=20, pady=5)
         
         #Longest/Current streak
         self.longest_streak_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
@@ -362,17 +372,19 @@ class Tabview(ctk.CTkTabview):
                     #Total task complete since install
                     cursor.execute("SELECT SUM(quest_completed), SUM(quest_set) FROM streak")
                     task = cursor.fetchone()
-
-                    self.task_complete_TB.delete("0.0", "end")
                     
                     if (task) and (task[0] is not None) and (task[1] is not None):
-                        self.task_complete_TB.insert("end", f'Total Task Completed: {task[0]}\n')
-                        self.task_complete_TB.insert("end", f'Total Task Missed: {task[1] - task[0]}\n\n')
+                        self.task_complete_label.configure(text=f'Total Task Completed: {task[0]}')
+                        self.task_missed_label.configure(text=f'Total Task Missed: {task[1] - task[0]}')
                         
                         if task[1] == 0:
-                            self.task_complete_TB.insert("end", '0% of task completed\n')
+                            percentage = 0
                         else:
-                            self.task_complete_TB.insert("end", f'{"{:.2f}".format(task[0] / task[1] * 100)}% of task completed\n')
+                            percentage = float("{:.2f}".format(task[0] / task[1] * 100))
+                            
+                        self.percentage_bar.set(percentage / 100.0)
+                        self.update_idletasks()
+                        self.percentage_label.configure(text=f'{percentage}% of task completed')
                     
                     #Longest/Current streak
                     current_streak = 0
