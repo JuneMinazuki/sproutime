@@ -39,6 +39,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_thread = None
         self.score_thread = None
         self.stats_thread = None
+        self.bar_thread = None
 
         #Create widget
         self.create_progress_widgets()
@@ -150,27 +151,53 @@ class Tabview(ctk.CTkTabview):
         self.total_time_spend_frame = ctk.CTkFrame(self.stat_frame)
         self.total_time_spend_frame.grid(row=0, column=3, padx=10, pady=5)
         
+        self.task_complete_frame = ctk.CTkFrame(self.stat_frame)
+        self.task_complete_frame.grid(row=1, column=1, padx=10, pady=5)
+        
+        self.streak_frame = ctk.CTkFrame(self.stat_frame)
+        self.streak_frame.grid(row=1, column=3, padx=10, pady=5)
+        
         #Time Spend for Each App For 1 Week 
         self.time_spend_label = ctk.CTkLabel(self.time_spend_frame, text="Time Spend for Each App In The Last Week:")
-        self.time_spend_label.grid(row=0, column=0)
+        self.time_spend_label.pack()
         
         self.time_spend_chart = DrawPieChart(self.time_spend_frame, {})
-        self.time_spend_chart.grid(row=1, column=0)
+        self.time_spend_chart.pack()
         
         #Total Time Spend
         self.total_time_spend_label = ctk.CTkLabel(self.total_time_spend_frame, text="Total Time Spend:")
-        self.total_time_spend_label.grid(row=0, column=0)
+        self.total_time_spend_label.pack()
         
         self.total_time_spend_chart = DrawPieChart(self.total_time_spend_frame, {})
-        self.total_time_spend_chart.grid(row=1, column=0)
+        self.total_time_spend_chart.pack()
 
         #Total task complete since install
-        self.task_complete_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
-        self.task_complete_TB.grid(row=1, column=1, padx=10, pady=20)
+        self.task_complete_label = ctk.CTkLabel(self.task_complete_frame, text="Total Task Completed:", anchor="w")
+        self.task_complete_label.pack(fill="x", padx=20, pady=(10,5))
+        
+        self.task_missed_label = ctk.CTkLabel(self.task_complete_frame, text="Total Task Missed:", anchor="w")
+        self.task_missed_label.pack(fill="x", padx=20, pady=5)
+        
+        self.percentage_bar = ctk.CTkProgressBar(self.task_complete_frame, mode="determinate", height=15, width=500, progress_color='#76d169')
+        self.percentage_bar.pack(padx=20, pady=(50,0))
+        self.percentage_bar.set(0)
+        
+        self.percentage_label = ctk.CTkLabel(self.task_complete_frame, text="% of task completed")
+        self.percentage_label.pack(fill="x", padx=20, pady=5)
         
         #Longest/Current streak
-        self.longest_streak_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
-        self.longest_streak_TB.grid(row=1, column=3, padx=10, pady=20)
+        self.current_streak_label = ctk.CTkLabel(self.streak_frame, text="Current Streak:", anchor="w")
+        self.current_streak_label.pack(fill="x", padx=20, pady=(10,5))
+        
+        self.longest_streak_label = ctk.CTkLabel(self.streak_frame, text="Longest Streak:", anchor="w")
+        self.longest_streak_label.pack(fill="x", padx=20, pady=5)
+        
+        self.streak_bar = ctk.CTkProgressBar(self.streak_frame, mode="determinate", height=15, width=500, progress_color='#76d169')
+        self.streak_bar.pack(padx=20, pady=(50,0))
+        self.streak_bar.set(0)
+        
+        self.streak_label = ctk.CTkLabel(self.streak_frame, text=" more day(s) to go!")
+        self.streak_label.pack(fill="x", padx=20, pady=5)
         
         #Refresh Button
         self.refresh_stat_button = ctk.CTkButton(self.stat_tab, text="Refresh", command=self.refresh_stat, width=200)
@@ -190,8 +217,47 @@ class Tabview(ctk.CTkTabview):
 
     def create_bar_widgets(self):
         self.bar_tab = self.add("Progress Bar")
+        # get data from database
+        global quest_list_update, quest_list,quest_dict
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT app_name, maximum, time FROM quest")
+            quests = cursor.fetchall()
+            quest_list = []
+            quest_dict = {}
+            for quest in quests:
+                app_name = quest[0]
+                maximum = ">" if quest[1] == 1 else "<"
+                time = quest[2]
+                quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        # if quest_list is empty, set to "No quests available" until not empty and updated to dropdown
+        if not quest_list:
+            quest_list = ["No quests available"]
+        #Quest Option
+        self.quest_dropdown = ctk.CTkComboBox(self.bar_tab, values=quest_list, command=self.combobox_callback)
+        self.quest_dropdown.pack(pady=10, padx=10)
+        self.quest_dropdown.set(quest_list[0])  # Set default value
+        
+        # Add Refresh Button for Progress Bar Tab
+        self.refresh_bar_button = ctk.CTkButton(self.bar_tab, text="Refresh", command=self.refresh_bar_tab)
+        self.refresh_bar_button.pack(pady=10)
+
+        #Add Progress Bar Button
         self.add_progress_button = ctk.CTkButton(self.bar_tab, text="Add", command=self.add_progress_bar)
         self.add_progress_button.pack(pady=10)
+        # if quest_dropdown choose "No quests available", disable the button
+        if self.quest_dropdown.get() == "No quests available":
+            self.add_progress_button.configure(state="disabled")
+        else:
+            self.add_progress_button.configure(state="normal")
 
         self.progress_frame = ctk.CTkFrame(self.bar_tab)
         self.progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -199,20 +265,33 @@ class Tabview(ctk.CTkTabview):
         self.progress_bars = []
         
     def add_progress_bar(self):
+        global quest_list, quest_list_update, quest_dict
         # Frame for each progress bar
         bar_frame = ctk.CTkFrame(self.progress_frame)
         bar_frame.pack(fill="x", pady=5)
+        
+        # get the selected quest from dropdown out of the frame
+        selected_quest = self.quest_dropdown.get()
+        if selected_quest:
+            # Extract app name, maximum, and time from the selected quest
+            app_name, maximum_time = selected_quest.split(" : ")
+            maximum, time, unit = maximum_time.split(" ")
+            time = (float(time) * 60)
+            label_text = f"{app_name} : {maximum} {time / 60} hour"
+            # Create a label for the progress bar
+            label = ctk.CTkLabel(bar_frame, text=label_text)
+            label.pack(pady=5)
+        
+        
 
-        # Editable text above progress bar
-        text_entry = ctk.CTkEntry(bar_frame, placeholder_text="Enter text here")
-        text_entry.pack(anchor="w", fill="x", padx=5, pady=2)
 
         # Progress bar
         progress_bar = ctk.CTkProgressBar(bar_frame)
-        progress_bar.set(0.1)  # Set initial progress to 10%
+        progress_bar.set(0)  # Set initial progress to 0%
         progress_bar.pack(fill="x", padx=5, pady=5)
+        bar_frame.progress_bar = progress_bar  # Store reference to the progress bar in the frame        
 
-        # Increase progress button
+        
         increase_button = ctk.CTkButton(bar_frame, text="Increase", width=80, command=lambda: self.increase_progress(progress_bar))
         increase_button.pack(pady=5)
 
@@ -221,6 +300,49 @@ class Tabview(ctk.CTkTabview):
         delete_button.pack(pady=5)
 
         self.progress_bars.append(bar_frame)
+        
+
+    def refresh_bar_tab(self):
+        # Remove all progress bars
+        for bar_frame in self.progress_bars:
+            bar_frame.destroy()
+        self.progress_bars.clear()
+
+        # Refresh quest list from database
+        global quest_list, quest_dict
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT app_name, maximum, time FROM quest")
+            quests = cursor.fetchall()
+            quest_list = []
+            quest_dict = {}
+            for quest in quests:
+                app_name = quest[0]
+                maximum = ">" if quest[1] == 1 else "<"
+                time = quest[2]
+                quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        # If quest_list is empty, set to "No quests available"
+        if not quest_list:
+            quest_list = ["No quests available"]
+
+        # Update dropdown values and reset selection
+        self.quest_dropdown.configure(values=quest_list)
+        self.quest_dropdown.set(quest_list[0])
+
+        # Re-enable the add button if there are quests available
+        if self.quest_dropdown.get() == "No quests available":
+            self.add_progress_button.configure(state="disabled")
+        else:
+            self.add_progress_button.configure(state="normal")
+        
 
     def increase_progress(self, progress_bar):
         current_value = progress_bar.get()
@@ -230,6 +352,41 @@ class Tabview(ctk.CTkTabview):
     def delete_progress_bar(self, bar_frame):
         bar_frame.destroy()
         self.progress_bars.remove(bar_frame)
+
+    def update_progress_bar(self,bar_frame):
+        global app_dict
+        
+        selected_quest = self.quest_dropdown.get()
+        # if selected quest is in quest_list, extract quest_list
+        if selected_quest:
+            app_name, maximum_time = selected_quest.split(" : ")
+            maximum, time, _ = maximum_time.split(" ")
+            time = (float(time) * 3600)
+            
+            if app_name in app_dict:
+                current_time = app_dict[app_name]
+            else:
+                current_time = 0
+            
+            # get the current progress of the bar
+            current_value = bar_frame.progress_bar.get()
+            
+            # calculate the new value until it reaches max (1.0) using do until
+            if current_value < 1.0:
+                new_value = current_time / time  # increase by 1% of the total time
+                bar_frame.progress_bar.set(new_value)
+                self.update_idletasks()
+                # if the progress bar reaches 100%, show a message box
+            
+           
+            
+        
+                    
+                    
+  
+
+    
+
 
     def update_progress(self):
         global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list
@@ -374,23 +531,24 @@ class Tabview(ctk.CTkTabview):
                     #Total task complete since install
                     cursor.execute("SELECT SUM(quest_completed), SUM(quest_set) FROM streak")
                     task = cursor.fetchone()
-
-                    self.task_complete_TB.delete("0.0", "end")
                     
                     if (task) and (task[0] is not None) and (task[1] is not None):
-                        self.task_complete_TB.insert("end", f'Total Task Completed: {task[0]}\n')
-                        self.task_complete_TB.insert("end", f'Total Task Missed: {task[1] - task[0]}\n\n')
+                        self.task_complete_label.configure(text=f'Total Task Completed: {task[0]}')
+                        self.task_missed_label.configure(text=f'Total Task Missed: {task[1] - task[0]}')
                         
                         if task[1] == 0:
-                            self.task_complete_TB.insert("end", '0% of task completed\n')
+                            percentage = 0
                         else:
-                            self.task_complete_TB.insert("end", f'{"{:.2f}".format(task[0] / task[1] * 100)}% of task completed\n')
+                            percentage = float("{:.2f}".format(task[0] / task[1] * 100))
+                            
+                        self.percentage_bar.set(percentage / 100.0)
+                        self.update_idletasks()
+                        self.percentage_label.configure(text=f'{percentage}% of task completed')
                     
                     #Longest/Current streak
                     current_streak = 0
                     longest_streak = 0
                     count = 0
-                    self.longest_streak_TB.delete("0.0", "end")
                     
                     cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(date.today()),))
                     days = cursor.fetchall()
@@ -400,7 +558,7 @@ class Tabview(ctk.CTkTabview):
                             current_streak += 1
                         else:
                             break
-                    self.longest_streak_TB.insert("end", f'Current Streak: {current_streak}\n')
+                    self.current_streak_label.configure(text=f'Current Streak: {current_streak}')
                     
                     cursor.execute("SELECT date, quest_completed, quest_set FROM streak ORDER BY date ASC")
                     days = cursor.fetchall()
@@ -413,7 +571,12 @@ class Tabview(ctk.CTkTabview):
                                 longest_streak = max(longest_streak, count)
                                 count = 0
                     longest_streak = max(longest_streak, count)
-                    self.longest_streak_TB.insert("end", f'Longest Streak: {longest_streak}\n')
+                    self.longest_streak_label.configure(text=f'Longest Streak: {longest_streak}')
+                    
+                    self.streak_bar.set(current_streak / longest_streak)
+                    self.update_idletasks()
+                    day_left = longest_streak - current_streak
+                    self.streak_label.configure(text=f'{day_left} more day(s) to go!')
                     
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An error occurred: {e}")
@@ -431,6 +594,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_active = tab == "Quest"
         self.score_active = tab == "Score"
         self.stats_active = tab == "Stats"
+        self.bar_active = tab == "Progress Bar"
 
         #Progess Tab
         if self.progress_active and (self.progress_thread is None or not self.progress_thread.is_alive()):
@@ -463,6 +627,21 @@ class Tabview(ctk.CTkTabview):
         elif not self.stats_active and self.stats_thread and self.stats_thread.is_alive():
             # The thread will naturally pause in its while loop
             pass
+        
+        #Bar Tab
+        if self.bar_active and (self.bar_thread is None or not self.bar_thread.is_alive()):
+            self.bar_thread = threading.Thread(target=self.update_bar_tab, daemon=True)
+            self.bar_thread.start()
+        elif not self.bar_active and self.bar_thread and self.bar_thread.is_alive():
+            pass
+
+    def update_bar_tab(self):
+        while self.bar_active:
+            for bar_frame in self.progress_bars:
+                self.update_progress_bar(bar_frame)
+            sleep(1)
+
+            
 
     def tab_changed(self):
         self.start_updating()
@@ -622,15 +801,13 @@ class DrawPieChart(ctk.CTkFrame):
         self.pie_frame.grid(row=0, column=0, sticky="nsew")
 
         # Create a canvas widget for the pie chart
-        canvas_width = 260
-        canvas_height = 260
-        self.canvas = ctk.CTkCanvas(self.pie_frame, width=canvas_width, height=canvas_height, highlightthickness=0)
+        self.canvas = ctk.CTkCanvas(self.pie_frame, width=290, height=260, highlightthickness=0)
         self.canvas.pack(side="left", padx=10, pady=10) # Use pack for single element in frame
 
         # Create a frame for the legend
-        legend_frame = ctk.CTkFrame(self.pie_frame, width=300, height=260) # Increased legend_frame width to 300
+        legend_frame = ctk.CTkFrame(self.pie_frame, width=300, height=260) 
         legend_frame.pack(side="right", padx=5, pady=10, fill="y")
-        legend_frame.grid_propagate(False)  # Prevent the frame from resizing with content
+        legend_frame.grid_propagate(False) 
 
         # Create a scrollable container for the legend items
         self.legend_scrollable_frame = ctk.CTkScrollableFrame(legend_frame, height=240)
@@ -733,7 +910,7 @@ class DebugMenu(ctk.CTkToplevel):
         self.time_speed_label = ctk.CTkLabel(master=self, text="Speed Up")
         self.time_speed_label.grid(row=0, column=0, padx=20, pady=10, sticky='w')
         self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text='', variable=_d_time_speed,
-                                                    onvalue=300, offvalue=1, width=10)
+                                                    onvalue=3600, offvalue=1, width=10)
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
         
         #Clear quest
