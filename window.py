@@ -150,6 +150,9 @@ class Tabview(ctk.CTkTabview):
         self.task_complete_frame = ctk.CTkFrame(self.stat_frame)
         self.task_complete_frame.grid(row=1, column=1, padx=10, pady=5)
         
+        self.streak_frame = ctk.CTkFrame(self.stat_frame)
+        self.streak_frame.grid(row=1, column=3, padx=10, pady=5)
+        
         #Time Spend for Each App For 1 Week 
         self.time_spend_label = ctk.CTkLabel(self.time_spend_frame, text="Time Spend for Each App In The Last Week:")
         self.time_spend_label.pack()
@@ -179,8 +182,18 @@ class Tabview(ctk.CTkTabview):
         self.percentage_label.pack(fill="x", padx=20, pady=5)
         
         #Longest/Current streak
-        self.longest_streak_TB = ctk.CTkTextbox(self.stat_frame, width=540, height=260)
-        self.longest_streak_TB.grid(row=1, column=3, padx=10, pady=20)
+        self.current_streak_label = ctk.CTkLabel(self.streak_frame, text="Current Streak:", anchor="w")
+        self.current_streak_label.pack(fill="x", padx=20, pady=(10,5))
+        
+        self.longest_streak_label = ctk.CTkLabel(self.streak_frame, text="Longest Streak:", anchor="w")
+        self.longest_streak_label.pack(fill="x", padx=20, pady=5)
+        
+        self.streak_bar = ctk.CTkProgressBar(self.streak_frame, mode="determinate", height=15, width=500, progress_color='#76d169')
+        self.streak_bar.pack(padx=20, pady=(50,0))
+        self.streak_bar.set(0)
+        
+        self.streak_label = ctk.CTkLabel(self.streak_frame, text=" more day(s) to go!")
+        self.streak_label.pack(fill="x", padx=20, pady=5)
         
         #Refresh Button
         self.refresh_stat_button = ctk.CTkButton(self.stat_tab, text="Refresh", command=self.refresh_stat, width=200)
@@ -521,7 +534,6 @@ class Tabview(ctk.CTkTabview):
                     current_streak = 0
                     longest_streak = 0
                     count = 0
-                    self.longest_streak_TB.delete("0.0", "end")
                     
                     cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(date.today()),))
                     days = cursor.fetchall()
@@ -531,7 +543,7 @@ class Tabview(ctk.CTkTabview):
                             current_streak += 1
                         else:
                             break
-                    self.longest_streak_TB.insert("end", f'Current Streak: {current_streak}\n')
+                    self.current_streak_label.configure(text=f'Current Streak: {current_streak}')
                     
                     cursor.execute("SELECT date, quest_completed, quest_set FROM streak ORDER BY date ASC")
                     days = cursor.fetchall()
@@ -544,7 +556,12 @@ class Tabview(ctk.CTkTabview):
                                 longest_streak = max(longest_streak, count)
                                 count = 0
                     longest_streak = max(longest_streak, count)
-                    self.longest_streak_TB.insert("end", f'Longest Streak: {longest_streak}\n')
+                    self.longest_streak_label.configure(text=f'Longest Streak: {longest_streak}')
+                    
+                    self.streak_bar.set(current_streak / longest_streak)
+                    self.update_idletasks()
+                    day_left = longest_streak - current_streak
+                    self.streak_label.configure(text=f'{day_left} more day(s) to go!')
                     
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An error occurred: {e}")
