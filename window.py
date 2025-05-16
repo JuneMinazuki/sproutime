@@ -164,8 +164,8 @@ class Tabview(ctk.CTkTabview):
         self.time_spend_chart = DrawPieChart(self.time_spend_frame, {})
         self.time_spend_chart.pack()
         
-        #Total Time Spend
-        self.total_time_spend_label = ctk.CTkLabel(self.total_time_spend_frame, text="Total Time Spend:")
+        #Total Time Spend For 1 Month
+        self.total_time_spend_label = ctk.CTkLabel(self.total_time_spend_frame, text="Time Spend During The Past Month:")
         self.total_time_spend_label.pack()
         
         self.total_time_spend_chart = DrawPieChart(self.total_time_spend_frame, {})
@@ -485,6 +485,7 @@ class Tabview(ctk.CTkTabview):
             if stat_update:
                 today = datetime.now()
                 one_week_ago = (today - timedelta(days=7)).strftime('%Y-%m-%d')
+                one_month_ago = (today - timedelta(days=30)).strftime('%Y-%m-%d')
         
                 conn = sqlite3.connect('sproutime.db')
                 cursor = conn.cursor()
@@ -504,8 +505,8 @@ class Tabview(ctk.CTkTabview):
                     self.time_spend_chart.update_data(time_dict)
                     self.after(100, self.time_spend_chart._draw_chart)
 
-                    #Total Time Spend
-                    cursor.execute("SELECT app_name, duration FROM app_time")
+                    #Total Time Spend For 1 Month
+                    cursor.execute("SELECT app_name, duration FROM app_time WHERE date >= ?", (one_month_ago,))
                     app_time = cursor.fetchall()
                     
                     time_dict = {}
