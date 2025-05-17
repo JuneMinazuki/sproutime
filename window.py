@@ -1499,6 +1499,15 @@ p1 = threading.Thread(target=update_time)
 
 p1.start()
 
-Tabview(master=app).grid(row=0, column=0, columnspan=2, sticky="nsew")
+scrollable_frame = ctk.CTkScrollableFrame(app)
+bg_color = scrollable_frame.cget("fg_color") # Get the background color of the scrollable frame
+scrollable_frame.configure( # Hide the scrollbar by making its colors the same as the background
+    scrollbar_fg_color=bg_color,
+    scrollbar_button_color=bg_color,
+    scrollbar_button_hover_color=bg_color
+)
+scrollable_frame.pack(fill="both", expand=True)
+
+Tabview(master=scrollable_frame).pack(padx=(20), pady=20, fill="x",)
 app.protocol("WM_DELETE_WINDOW", on_closing)
 app.mainloop()
