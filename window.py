@@ -101,7 +101,13 @@ class Tabview(ctk.CTkTabview):
         self.save_button.grid(row=1, column=2, padx=10, pady=20, sticky='e')
 
         #Quest Saved Textbox
-        self.quest_list_frame = ctk.CTkScrollableFrame(self.quest_tab) #UpdateHere
+        self.quest_list_frame = ctk.CTkScrollableFrame(self.quest_tab, width=1080) #UpdateHere
+        bg_color = self.quest_list_frame.cget("fg_color") # Get the background color of the scrollable frame
+        self.quest_list_frame.configure( # Hide the scrollbar by making its colors the same as the background
+            scrollbar_fg_color=bg_color,
+            scrollbar_button_color=bg_color,
+            scrollbar_button_hover_color=bg_color
+        )
         self.quest_list_frame.pack(padx=10, pady=20)
         quest_list_update = True
 
@@ -411,13 +417,33 @@ class Tabview(ctk.CTkTabview):
                     for widget in self.quest_list_frame.winfo_children():
                         widget.destroy()
             
-                    for app, sign, time in quests:
+                    for app, sign, time in quests: #UpdateHere
                         maximum = ">" if sign == 1 else "<"
+                        
+                        self.quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=100)
+                        self.quest_box.pack(pady=5)
+                        self.quest_box.grid_columnconfigure((0), weight=1)
+                        self.quest_box.grid_propagate(False)
+                        
+                        #Quest Name
+                        self.quest_name_label = ctk.CTkLabel(self.quest_box, text=f'{app}')
+                        self.quest_name_label.grid(row=0, column=0, sticky="w", padx=30)
+                        
+                        #Quest Time
+                        self.quest_time_dropdown = ctk.CTkLabel(self.quest_box, text=f'{maximum}{time / 60} hour(s)')
+                        self.quest_time_dropdown.grid(row=0, column=2, sticky="e", padx=50)
+                        
+                        #Change Name 
+                        entry = ctk.CTkEntry(self.quest_box, placeholder_text="New name")
+                        entry.grid(row=1, column=0, padx=30, pady=5, sticky="w")
+            
+                        #Delete Button
+                        self.delete_button = ctk.CTkButton(self.quest_box, text="Delete", command=self.delete_quest)
+                        self.delete_button.grid(row=1, column=1, padx=(0, 5), pady=10, sticky="e")
 
-                        #if appname_dict and app in old_name_list:
-                            #self.quest_list_frame.insert("0.0", f'{appname_dict[app]} : {maximum}{time / 60} hour\n') #UpdateHere
-                        #else:
-                            #self.quest_list_frame.insert("0.0", f'{app} : {maximum}{time / 60} hour\n') #UpdateHere
+                        #Save Button
+                        self.save_button = ctk.CTkButton(self.quest_box, text="Save", command=self.save_quest_time)
+                        self.save_button.grid(row=1, column=2, padx=(5, 30), pady=10, sticky='e')
                         
                         quest_list.append(app)
                         quest_dict[app] = {"maximum": maximum, "time": time * 60}
@@ -635,9 +661,7 @@ class Tabview(ctk.CTkTabview):
         while self.bar_active:
             for bar_frame in self.progress_bars:
                 self.update_progress_bar(bar_frame)
-            sleep(1)
-
-            
+            sleep(1)       
 
     def tab_changed(self):
         self.start_updating()
@@ -1190,7 +1214,7 @@ def get_all_app_list():
 
             win32gui.EnumWindows(enumWindowsArguments, None)
               
-    app_list = [app for app in app_list if (app not in quest_list) or (app == google)] #updatehere
+    app_list = [app for app in app_list if (app not in quest_list) or (app == google)]
     return app_list
 
 def get_active_tab_name():
