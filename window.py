@@ -68,44 +68,56 @@ class Tabview(ctk.CTkTabview):
         global quest_list_update
         self.quest_tab = self.add("Quest")
 
+        self.set_quest_frame = ctk.CTkFrame(self.quest_tab)
+        self.set_quest_frame.pack(fill="x")
+        
+        for col in range(3):
+            self.set_quest_frame.columnconfigure(col, weight=1)
+        
         #App Option
-        self.app_dropdown = ctk.CTkComboBox(self.quest_tab,values=app_list, command=self.combobox_callback)
+        self.app_dropdown = ctk.CTkComboBox(self.set_quest_frame,values=app_list, command=self.combobox_callback)
         self.app_dropdown.grid(row=0, column=0, padx=10, pady=20, sticky='w')
 
         #Time Option
-        self.time_dropdown = ctk.CTkComboBox(self.quest_tab,values=time, command=self.timebox_callback)
+        self.time_dropdown = ctk.CTkComboBox(self.set_quest_frame,values=time, command=self.timebox_callback)
         self.time_dropdown.grid(row=0, column=2, padx=10, pady=20, sticky='e')
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
-        self.tabBox = ctk.CTkComboBox(self.quest_tab, values=tab_list, command=self.tabBox_callback)
-        self.tabBox.grid(row=0, column=1)
+        self.tabBox = ctk.CTkComboBox(self.set_quest_frame, values=tab_list, command=self.tabBox_callback)
+        self.tabBox.grid(row=0, column=1, sticky="e")
         self.tabBox.set(tab_list[0])
         self.check_for_chrome()    
         
         #Refresh Button
-        self.refresh_button = ctk.CTkButton(self.quest_tab, text="Refresh", command=self.refresh_app_list)
+        self.refresh_button = ctk.CTkButton(self.set_quest_frame, text="Refresh", command=self.refresh_app_list)
         self.refresh_button.grid(row=1, column=0, padx=10, pady=20, sticky='w')
         
         #Delete Button
-        self.delete_button = ctk.CTkButton(self.quest_tab, text="Delete", command=self.delete_quest)
+        self.delete_button = ctk.CTkButton(self.set_quest_frame, text="Delete", command=self.delete_quest)
         self.delete_button.grid(row=1, column=1, padx=10, pady=20, sticky="e")
 
         #Save Button
-        self.save_button = ctk.CTkButton(self.quest_tab, text="Save", command=self.save_quest_time)
+        self.save_button = ctk.CTkButton(self.set_quest_frame, text="Save", command=self.save_quest_time)
         self.save_button.grid(row=1, column=2, padx=10, pady=20, sticky='e')
 
         #Quest Saved Textbox
-        self.quest_list_TB = ctk.CTkTextbox(self.quest_tab, width=1080, height=180)
-        self.quest_list_TB.grid(row=2, column=0, padx=10, pady=20, columnspan = 3)
+        self.quest_list_frame = ctk.CTkScrollableFrame(self.quest_tab, width=1080) #UpdateHere
+        bg_color = self.quest_list_frame.cget("fg_color") # Get the background color of the scrollable frame
+        self.quest_list_frame.configure( # Hide the scrollbar by making its colors the same as the background
+            scrollbar_fg_color=bg_color,
+            scrollbar_button_color=bg_color,
+            scrollbar_button_hover_color=bg_color
+        )
+        self.quest_list_frame.pack(padx=10, pady=20)
         quest_list_update = True
 
         # Scrollable frame for name changer
         self.appname_widgets = []  
 
-        self.scrollable_frame = ctk.CTkScrollableFrame(self.quest_tab)
-        self.scrollable_frame.grid(row=3, column=0, sticky="nsew")
+        self.scrollable_frame = ctk.CTkScrollableFrame(self.quest_tab) #UpdateHere
+        self.scrollable_frame.pack(padx=10, pady=20)
 
-        for i, app in enumerate(app_list):
+        for i, app in enumerate(app_list): #UpdateHere
             label = ctk.CTkLabel(self.scrollable_frame, text=app)
             label.grid(row=i, column=0, padx=10, pady=5)
 
@@ -115,8 +127,8 @@ class Tabview(ctk.CTkTabview):
             self.appname_widgets.append((label, entry))
 
         # Add Change Name Button
-        save_button = ctk.CTkButton(self.quest_tab, text="Change", command=self.change_app_name)
-        save_button.grid(row=4, column=0)
+        save_button = ctk.CTkButton(self.quest_tab, text="Change", command=self.change_app_name) #UpdateHere
+        save_button.pack(padx=10, pady=20)
 
     def create_score_widgets(self):
         self.score_tab = self.add("Score")
@@ -218,19 +230,16 @@ class Tabview(ctk.CTkTabview):
     def create_bar_widgets(self):
         self.bar_tab = self.add("Progress Bar")
         # get data from database
-        global quest_list_update, quest_list,quest_dict
+        global quest_list_update
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
         try:
             cursor.execute("SELECT app_name, maximum, time FROM quest")
             quests = cursor.fetchall()
-            quest_list = []
-            quest_dict = {}
-            for quest in quests:
-                app_name = quest[0]
-                maximum = ">" if quest[1] == 1 else "<"
-                time = quest[2]
-                quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
+            bar_quest_list = []
+            for app_name, sign, time in quests:
+                maximum = ">" if sign == 1 else "<"
+                bar_quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
             conn.rollback()
@@ -239,12 +248,12 @@ class Tabview(ctk.CTkTabview):
                 conn.close()
 
         # if quest_list is empty, set to "No quests available" until not empty and updated to dropdown
-        if not quest_list:
-            quest_list = ["No quests available"]
+        if not bar_quest_list:
+            bar_quest_list = ["No quests available"]
         #Quest Option
-        self.quest_dropdown = ctk.CTkComboBox(self.bar_tab, values=quest_list, command=self.combobox_callback)
+        self.quest_dropdown = ctk.CTkComboBox(self.bar_tab, values=bar_quest_list, command=self.combobox_callback)
         self.quest_dropdown.pack(pady=10, padx=10)
-        self.quest_dropdown.set(quest_list[0])  # Set default value
+        self.quest_dropdown.set(bar_quest_list[0])  # Set default value
         
         # Add Refresh Button for Progress Bar Tab
         self.refresh_bar_button = ctk.CTkButton(self.bar_tab, text="Refresh", command=self.refresh_bar_tab)
@@ -305,19 +314,16 @@ class Tabview(ctk.CTkTabview):
         self.progress_bars.clear()
 
         # Refresh quest list from database
-        global quest_list, quest_dict
+        global quest_list
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
         try:
             cursor.execute("SELECT app_name, maximum, time FROM quest")
             quests = cursor.fetchall()
-            quest_list = []
-            quest_dict = {}
-            for quest in quests:
-                app_name = quest[0]
-                maximum = ">" if quest[1] == 1 else "<"
-                time = quest[2]
-                quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
+            bar_quest_list = []
+            for app_name, sign, time in quests:
+                maximum = ">" if sign == 1 else "<"
+                bar_quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
             conn.rollback()
@@ -405,19 +411,42 @@ class Tabview(ctk.CTkTabview):
                     cursor.execute("SELECT app_name, maximum, time FROM quest")
                     quests = cursor.fetchall()
                     
-                    self.quest_list_TB.delete("0.0", "end")
                     quest_dict.clear()
                     quest_list.clear()
-                    for quest in quests:
-                        maximum = ">" if quest[1] == 1 else "<"
-
-                        if appname_dict and quest[0] in old_name_list:
-                            self.quest_list_TB.insert("0.0", f'{appname_dict[quest[0]]} : {maximum}{quest[2] / 60} hour\n')
-                        else:
-                            self.quest_list_TB.insert("0.0", f'{quest[0]} : {maximum}{quest[2] / 60} hour\n')
+                    
+                    for widget in self.quest_list_frame.winfo_children():
+                        widget.destroy()
+            
+                    for app, sign, time in quests: #UpdateHere
+                        maximum = ">" if sign == 1 else "<"
                         
-                        quest_list.append(quest[0])
-                        quest_dict[quest[0]] = {"maximum": maximum, "time": quest[2] * 60}
+                        self.quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=100)
+                        self.quest_box.pack(pady=5)
+                        self.quest_box.grid_columnconfigure((0), weight=1)
+                        self.quest_box.grid_propagate(False)
+                        
+                        #Quest Name
+                        self.quest_name_label = ctk.CTkLabel(self.quest_box, text=f'{app}')
+                        self.quest_name_label.grid(row=0, column=0, sticky="w", padx=30)
+                        
+                        #Quest Time
+                        self.quest_time_dropdown = ctk.CTkLabel(self.quest_box, text=f'{maximum}{time / 60} hour(s)')
+                        self.quest_time_dropdown.grid(row=0, column=2, sticky="e", padx=50)
+                        
+                        #Change Name 
+                        entry = ctk.CTkEntry(self.quest_box, placeholder_text="New name")
+                        entry.grid(row=1, column=0, padx=30, pady=5, sticky="w")
+            
+                        #Delete Button
+                        self.delete_button = ctk.CTkButton(self.quest_box, text="Delete", command=self.delete_quest)
+                        self.delete_button.grid(row=1, column=1, padx=(0, 5), pady=10, sticky="e")
+
+                        #Save Button
+                        self.save_button = ctk.CTkButton(self.quest_box, text="Save", command=self.save_quest_time)
+                        self.save_button.grid(row=1, column=2, padx=(5, 30), pady=10, sticky='e')
+                        
+                        quest_list.append(app)
+                        quest_dict[app] = {"maximum": maximum, "time": time * 60}
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An error occurred: {e}")
                     conn.rollback()
@@ -632,9 +661,7 @@ class Tabview(ctk.CTkTabview):
         while self.bar_active:
             for bar_frame in self.progress_bars:
                 self.update_progress_bar(bar_frame)
-            sleep(1)
-
-            
+            sleep(1)       
 
     def tab_changed(self):
         self.start_updating()
@@ -661,9 +688,18 @@ class Tabview(ctk.CTkTabview):
         temp_quest_time = choice
 
     def refresh_app_list(self):
+        global quest_list, temp_quest_app, temp_quest_tab
+        
         app_list = get_all_app_list()
         self.app_dropdown.configure(values=app_list)
 
+        tab_list = ["Any Tabs"] if google not in quest_list else []
+        tab_list = [tab for tab in constant_tab_list if tab not in quest_list]
+        self.tabBox.configure(values=tab_list)
+        
+        temp_quest_app = app_list[0]
+        temp_quest_tab = tab_list[0]
+        
         self.appname_widgets = []
 
         for widget in self.scrollable_frame.winfo_children():
@@ -1151,32 +1187,35 @@ def get_active_app_name():
     return appName
 
 def get_all_app_list():
-        app_list = []
+    global quest_list, google
+    app_list = []
+    
+    if sys.platform == 'darwin':
+        running_app = AppKit.NSWorkspace.sharedWorkspace().runningApplications()
         
-        if sys.platform == 'darwin':
-            running_app = AppKit.NSWorkspace.sharedWorkspace().runningApplications()
-            
-            for app in running_app:
-                launch_date = app.launchDate()
-                if not app.isHidden() and launch_date:
-                    app_list.append(app.localizedName())
-                    
-        elif sys.platform == 'win32':
-            for process in psutil.process_iter(['pid', 'name']):
-                pid = process.info['pid']
-                ignored_processes = ["Applicationframehost", "Textinputhost"]
+        for app in running_app:
+            launch_date = app.launchDate()
+            if not app.isHidden() and launch_date:
+                app_list.append(app.localizedName())
+                
+    elif sys.platform == 'win32':
+        for process in psutil.process_iter(['pid', 'name']):
+            pid = process.info['pid']
+            ignored_processes = ["Applicationframehost", "Textinputhost"]
 
-                def enumWindowsArguments(handle, __):
-                    threadID, foundPID = win32process.GetWindowThreadProcessId(handle)
+            def enumWindowsArguments(handle, __):
+                threadID, foundPID = win32process.GetWindowThreadProcessId(handle)
 
-                    if foundPID == pid and win32gui.IsWindowVisible(handle):
-                        window_title = win32gui.GetWindowText(handle)
-                        app_name = process.info["name"].split(".")[0].capitalize() # Get all active app name
-                        if app_name not in app_list and app_name not in ignored_processes: 
-                            app_list.append(app_name)
+                if foundPID == pid and win32gui.IsWindowVisible(handle):
+                    window_title = win32gui.GetWindowText(handle)
+                    app_name = process.info["name"].split(".")[0].capitalize() # Get all active app name
+                    if app_name not in app_list and app_name not in ignored_processes: 
+                        app_list.append(app_name)
 
-                win32gui.EnumWindows(enumWindowsArguments, None)
-        return app_list
+            win32gui.EnumWindows(enumWindowsArguments, None)
+              
+    app_list = [app for app in app_list if (app not in quest_list) or (app == google)]
+    return app_list
 
 def get_active_tab_name():
     if sys.platform == "darwin":
@@ -1272,7 +1311,17 @@ def load_past_data():
         
         for quest in quests:
             completed_list.append(quest[0])
+        
+        #Current Quest
+        cursor.execute("SELECT app_name, maximum, time FROM quest")
+        quests = cursor.fetchall()
+        
+        for app, sign, time in quests:
+            maximum = ">" if sign == 1 else "<"
             
+            quest_list.append(app)
+            quest_dict[app] = {"maximum": maximum, "time": time * 60}
+
         #Total Score
         cursor.execute("SELECT SUM(score_earn) FROM quest_completion")
         score = cursor.fetchone()
@@ -1486,14 +1535,17 @@ stat_update = True
 #First load
 running = True
 
+load_past_data()
 time = [">1 hour", ">2 hours", '>3 hours', '<1 hour', '<2 hours']
 temp_quest_time = time[0]
 app_list = get_all_app_list()
-tab_list = ["Any Tabs", "Youtube", "Reddit", "Instagram", "Facebook", "Linkedin"]
+constant_tab_list = ["Youtube", "Reddit", "Instagram", "Facebook", "Linkedin"]
+tab_list = [tab for tab in constant_tab_list if tab not in quest_list]
+if google not in quest_list:
+    tab_list.insert(0, "Any Tabs")
 theme_options = ["Light", "Dark", "System"]
 temp_quest_app = app_list[0]
 temp_quest_tab = tab_list[0]
-load_past_data()
 
 p1 = threading.Thread(target=update_time)
 
