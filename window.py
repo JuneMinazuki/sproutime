@@ -68,42 +68,48 @@ class Tabview(ctk.CTkTabview):
         global quest_list_update
         self.quest_tab = self.add("Quest")
 
+        self.set_quest_frame = ctk.CTkFrame(self.quest_tab)
+        self.set_quest_frame.pack(fill="x")
+        
+        for col in range(3):
+            self.set_quest_frame.columnconfigure(col, weight=1)
+        
         #App Option
-        self.app_dropdown = ctk.CTkComboBox(self.quest_tab,values=app_list, command=self.combobox_callback)
+        self.app_dropdown = ctk.CTkComboBox(self.set_quest_frame,values=app_list, command=self.combobox_callback)
         self.app_dropdown.grid(row=0, column=0, padx=10, pady=20, sticky='w')
 
         #Time Option
-        self.time_dropdown = ctk.CTkComboBox(self.quest_tab,values=time, command=self.timebox_callback)
+        self.time_dropdown = ctk.CTkComboBox(self.set_quest_frame,values=time, command=self.timebox_callback)
         self.time_dropdown.grid(row=0, column=2, padx=10, pady=20, sticky='e')
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
-        self.tabBox = ctk.CTkComboBox(self.quest_tab, values=tab_list, command=self.tabBox_callback)
-        self.tabBox.grid(row=0, column=1)
+        self.tabBox = ctk.CTkComboBox(self.set_quest_frame, values=tab_list, command=self.tabBox_callback)
+        self.tabBox.grid(row=0, column=1, sticky="e")
         self.tabBox.set(tab_list[0])
         self.check_for_chrome()    
         
         #Refresh Button
-        self.refresh_button = ctk.CTkButton(self.quest_tab, text="Refresh", command=self.refresh_app_list)
+        self.refresh_button = ctk.CTkButton(self.set_quest_frame, text="Refresh", command=self.refresh_app_list)
         self.refresh_button.grid(row=1, column=0, padx=10, pady=20, sticky='w')
         
         #Delete Button
-        self.delete_button = ctk.CTkButton(self.quest_tab, text="Delete", command=self.delete_quest)
+        self.delete_button = ctk.CTkButton(self.set_quest_frame, text="Delete", command=self.delete_quest)
         self.delete_button.grid(row=1, column=1, padx=10, pady=20, sticky="e")
 
         #Save Button
-        self.save_button = ctk.CTkButton(self.quest_tab, text="Save", command=self.save_quest_time)
+        self.save_button = ctk.CTkButton(self.set_quest_frame, text="Save", command=self.save_quest_time)
         self.save_button.grid(row=1, column=2, padx=10, pady=20, sticky='e')
 
         #Quest Saved Textbox
         self.quest_list_TB = ctk.CTkTextbox(self.quest_tab, width=1080, height=180)
-        self.quest_list_TB.grid(row=2, column=0, padx=10, pady=20, columnspan = 3)
+        self.quest_list_TB.pack(padx=10, pady=20)
         quest_list_update = True
 
         # Scrollable frame for name changer
         self.appname_widgets = []  
 
         self.scrollable_frame = ctk.CTkScrollableFrame(self.quest_tab)
-        self.scrollable_frame.grid(row=3, column=0, sticky="nsew")
+        self.scrollable_frame.pack(padx=10, pady=20)
 
         for i, app in enumerate(app_list):
             label = ctk.CTkLabel(self.scrollable_frame, text=app)
@@ -116,7 +122,7 @@ class Tabview(ctk.CTkTabview):
 
         # Add Change Name Button
         save_button = ctk.CTkButton(self.quest_tab, text="Change", command=self.change_app_name)
-        save_button.grid(row=4, column=0)
+        save_button.pack(padx=10, pady=20)
 
     def create_score_widgets(self):
         self.score_tab = self.add("Score")
