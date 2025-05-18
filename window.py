@@ -79,7 +79,7 @@ class Tabview(ctk.CTkTabview):
         self.app_dropdown.grid(row=0, column=0, padx=10, pady=20, sticky='w')
 
         #Time Option
-        self.time_dropdown = ctk.CTkComboBox(self.set_quest_frame,values=time, command=self.timebox_callback)
+        self.time_dropdown = ctk.CTkComboBox(self.set_quest_frame,values=time_list, command=self.timebox_callback)
         self.time_dropdown.grid(row=0, column=2, padx=10, pady=20, sticky='e')
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
@@ -92,10 +92,6 @@ class Tabview(ctk.CTkTabview):
         self.refresh_button = ctk.CTkButton(self.set_quest_frame, text="Refresh", command=self.refresh_app_list)
         self.refresh_button.grid(row=1, column=0, padx=10, pady=20, sticky='w')
         
-        #Delete Button
-        self.delete_button = ctk.CTkButton(self.set_quest_frame, text="Delete", command=self.delete_quest)
-        self.delete_button.grid(row=1, column=1, padx=10, pady=20, sticky="e")
-
         #Save Button
         self.save_button = ctk.CTkButton(self.set_quest_frame, text="Save", command=self.save_quest_time)
         self.save_button.grid(row=1, column=2, padx=10, pady=20, sticky='e')
@@ -415,9 +411,9 @@ class Tabview(ctk.CTkTabview):
                     quest_list.clear()
                     
                     for widget in self.quest_list_frame.winfo_children():
-                        widget.destroy()
+                        widget.pack_forget()
             
-                    for app, sign, time in quests: #UpdateHere
+                    for app, sign, time in quests:
                         maximum = ">" if sign == 1 else "<"
                         
                         self.quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=100)
@@ -427,23 +423,27 @@ class Tabview(ctk.CTkTabview):
                         
                         #Quest Name
                         self.quest_name_label = ctk.CTkLabel(self.quest_box, text=f'{app}')
-                        self.quest_name_label.grid(row=0, column=0, sticky="w", padx=30)
+                        self.quest_name_label.grid(row=0, column=0, sticky="w", padx=30, pady=10)
                         
                         #Quest Time
-                        self.quest_time_dropdown = ctk.CTkLabel(self.quest_box, text=f'{maximum}{time / 60} hour(s)')
-                        self.quest_time_dropdown.grid(row=0, column=2, sticky="e", padx=50)
+                        self.quest_time_dropdown = ctk.CTkComboBox(self.quest_box, values=time_list)
+                        self.quest_time_dropdown.set(f"{maximum}{time // 60} hour(s)")
+                        self.quest_time_dropdown.grid(row=0, column=2, sticky="e", padx=30, pady=10)
                         
                         #Change Name 
-                        entry = ctk.CTkEntry(self.quest_box, placeholder_text="New name")
-                        entry.grid(row=1, column=0, padx=30, pady=5, sticky="w")
+                        self.entry = ctk.CTkEntry(self.quest_box, placeholder_text="New name") #UpdateHere
+                        self.entry.grid(row=1, column=0, padx=30, pady=5, sticky="w")
             
                         #Delete Button
-                        self.delete_button = ctk.CTkButton(self.quest_box, text="Delete", command=self.delete_quest)
+                        self.delete_button = ctk.CTkButton(self.quest_box, text="Delete", command=lambda current_app=app: self.delete_quest(current_app)) #UpdateHere
                         self.delete_button.grid(row=1, column=1, padx=(0, 5), pady=10, sticky="e")
 
                         #Save Button
-                        self.save_button = ctk.CTkButton(self.quest_box, text="Save", command=self.save_quest_time)
+                        self.save_button = ctk.CTkButton(self.quest_box, text="Save", command=lambda dropdown=self.quest_time_dropdown, current_app=app: self.update_quest_frame(dropdown, current_app)) #UpdateHere
                         self.save_button.grid(row=1, column=2, padx=(5, 30), pady=10, sticky='e')
+                        self.save_button.quest_app = app 
+                        self.save_button.time_dropdown_widget = self.quest_time_dropdown
+                        self.save_button.new_name_widget = self.entry
                         
                         quest_list.append(app)
                         quest_dict[app] = {"maximum": maximum, "time": time * 60}
@@ -732,6 +732,62 @@ class Tabview(ctk.CTkTabview):
         
         quest_list_update = True
 
+    def update_quest_frame(self, dropdown_widget, app_name): #UpdateHere
+        global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update
+        max_map = {'>': 1, '<': 0}
+        time_map = {'1 hour(s)': 60, '2 hour(s)': 120, '3 hour(s)': 180}
+        
+        selected_time = dropdown_widget.get()
+        maximum = max_map.get(selected_time[0])
+        minutes = time_map.get(selected_time[1:])
+
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (minutes, maximum, app_name))
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        if app_name in completed_list:
+            completed_list.remove(app_name)
+            
+            conn = sqlite3.connect('sproutime.db')
+            cursor = conn.cursor()
+            try:   
+                cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
+                conn.commit()
+            except sqlite3.Error as e:
+                if DEBUG: print(f"An error occurred: {e}")
+                conn.rollback()
+            finally:
+                if conn:
+                    conn.close()
+                    
+        if app_name in failed_list:
+            failed_list.remove(app_name)
+            
+            conn = sqlite3.connect('sproutime.db')
+            cursor = conn.cursor()
+            try:   
+                cursor.execute("DELETE FROM failed_quest WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
+                conn.commit()
+            except sqlite3.Error as e:
+                if DEBUG: print(f"An error occurred: {e}")
+                conn.rollback()
+            finally:
+                if conn:
+                    conn.close()
+            
+        check_quest(app_name)
+
+        quest_list_update = True
+    
     def save_quest_time(self):
         global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update
         max_map = {'>': 1, '<': 0}
@@ -744,11 +800,7 @@ class Tabview(ctk.CTkTabview):
         cursor = conn.cursor()
         
         try:
-            cursor.execute("SELECT COUNT(*) FROM quest WHERE app_name = ?", (name,))
-            if cursor.fetchone()[0] > 0:
-                cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (minutes, maximum, name))
-            else:
-                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (name, minutes, maximum))
+            cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (name, minutes, maximum))
             conn.commit()
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
@@ -756,9 +808,8 @@ class Tabview(ctk.CTkTabview):
         finally:
             if conn:
                 conn.close()
-
-        if maximum == 0:
-            completed_list.append(name)
+            
+        check_quest(app_name)
 
         quest_list_update = True
 
@@ -1347,7 +1398,7 @@ def load_past_data():
     app_time_update = True
 
 def update_time():
-    global app_name, app_dict, app_time_update, running, quest_complete_update, quest_dict, _d_time_speed, task_score, total_points, completed_list, stat_update
+    global app_name, app_dict, app_time_update, running, _d_time_speed
     
     while running:
         now = datetime.now()
@@ -1367,67 +1418,93 @@ def update_time():
                 app_dict[app_name] += _d_time_speed.get()
             else:
                 app_dict[app_name] = _d_time_speed.get()
-                
-            if (quest_list) and (app_name in quest_list):
-                if quest_dict[app_name]["time"] <= app_dict[app_name]:
-                    if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
-                        conn = sqlite3.connect('sproutime.db')
-                        cursor = conn.cursor()
-                        
-                        try:
-                            cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
-                            quest = cursor.fetchone()
-                            quest_time = quest[0]
-                            maximum = quest[1]
-                            
-                            cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
-                            conn.commit()
-                        except sqlite3.Error as e:
-                            if DEBUG: print(f"An error occurred: {e}")
-                            conn.rollback()
-                        finally:
-                            if conn:
-                                conn.close()
 
-                        completed_list.append(app_name)
-                        total_points += task_score
-                        notify(app_name, "min time completed")
-                                
-                    #Failed Quest      
-                    elif (quest_dict[app_name]["maximum"] == "<") and (app_name not in failed_list):
-                        failed_list.append(app_name)
-                        completed_list.remove(app_name)
-                        
-                        conn = sqlite3.connect('sproutime.db')
-                        cursor = conn.cursor()
-
-                        cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
-                        quest = cursor.fetchone()
-                        quest_time = quest[0]
-                        
-                        try:
-                            cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
-                            cursor.execute("INSERT INTO failed_quests (date, app_name, time, score_deduct) VALUES (?, ?, ?, ?)", (str(date.today()), app_name, quest_time, task_score))
-                            conn.commit()
-                        except sqlite3.Error as e:
-                            if DEBUG: print(f"An error occurred: {e}")
-                            conn.rollback()
-                        finally:
-                            if conn:
-                                conn.close()
-                        
-                        total_points -= task_score
-                        
-                        notify(app_name, "max time failed")
-
-                    quest_complete_update = True
-                
-                # 10 mins left till quest failed
-                elif ((quest_dict[app_name]["time"] - 600) == app_dict[app_name]) and (quest_dict[app_name]["maximum"] == "<"):
-                    notify(app_name, "10 mins left")
-
+            check_quest(app_name)
+            
             app_time_update = True
             sleep(1)
+
+def check_quest(app_name):
+    global quest_complete_update, app_dict, quest_list, quest_dict, total_points, task_score
+    
+    if (quest_list) and (app_name in quest_list):
+        if app_name in app_dict:
+            if quest_dict[app_name]["time"] <= app_dict[app_name]:
+                if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
+                    conn = sqlite3.connect('sproutime.db')
+                    cursor = conn.cursor()
+                    
+                    try:
+                        cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
+                        quest = cursor.fetchone()
+                        quest_time = quest[0]
+                        maximum = quest[1]
+                        
+                        cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
+                        conn.commit()
+                    except sqlite3.Error as e:
+                        if DEBUG: print(f"An error occurred: {e}")
+                        conn.rollback()
+                    finally:
+                        if conn:
+                            conn.close()
+
+                    completed_list.append(app_name)
+                    total_points += task_score
+                    notify(app_name, "min time completed")
+                            
+                #Failed Quest      
+                elif (quest_dict[app_name]["maximum"] == "<") and (app_name not in failed_list):
+                    failed_list.append(app_name)
+                    completed_list.remove(app_name)
+                    
+                    conn = sqlite3.connect('sproutime.db')
+                    cursor = conn.cursor()
+                    
+                    try:
+                        cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
+                        quest_time = cursor.fetchone()[0]
+                    
+                        cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
+                        cursor.execute("INSERT INTO failed_quests (date, app_name, time, score_deduct) VALUES (?, ?, ?, ?)", (str(date.today()), app_name, quest_time, task_score))
+                        conn.commit()
+                    except sqlite3.Error as e:
+                        if DEBUG: print(f"An error occurred: {e}")
+                        conn.rollback()
+                    finally:
+                        if conn:
+                            conn.close()
+                    
+                    total_points -= task_score
+                    
+                    notify(app_name, "max time failed")
+
+                quest_complete_update = True
+            
+            # 10 mins left till quest failed
+            elif ((quest_dict[app_name]["time"] - 600) == app_dict[app_name]) and (quest_dict[app_name]["maximum"] == "<"):
+                notify(app_name, "10 mins left")
+                
+        elif (quest_dict[app_name]["maximum"] == "<") and (app_name not in completed_list):
+            cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
+            quest_time = cursor.fetchone()[0]
+            
+            try:
+                cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
+                quest = cursor.fetchone()
+                quest_time = quest[0]
+                maximum = quest[1]
+                
+                cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
+                conn.commit()
+            except sqlite3.Error as e:
+                if DEBUG: print(f"An error occurred: {e}")
+                conn.rollback()
+            finally:
+                if conn:
+                    conn.close()
+                
+            completed_list.append(app_name)
     
 def update_log(today):
     global app_dict, completed_list, quest_list, failed_list, task_score
@@ -1470,6 +1547,8 @@ def update_log(today):
         
         conn.commit()
         app_dict = {}
+        completed_list = []
+        failed_list = []
     except sqlite3.Error as e:
         if DEBUG: print(f"An error occurred: {e}")
         conn.rollback()
@@ -1536,8 +1615,8 @@ stat_update = True
 running = True
 
 load_past_data()
-time = [">1 hour", ">2 hours", '>3 hours', '<1 hour', '<2 hours']
-temp_quest_time = time[0]
+time_list = [">1 hour(s)", ">2 hour(s)", '>3 hour(s)', '<1 hour(s)', '<2 hour(s)']
+temp_quest_time = time_list[0]
 app_list = get_all_app_list()
 constant_tab_list = ["Youtube", "Reddit", "Instagram", "Facebook", "Linkedin"]
 tab_list = [tab for tab in constant_tab_list if tab not in quest_list]
