@@ -234,9 +234,24 @@ class Tabview(ctk.CTkTabview):
                         appname = appname_dict[app]
                     else:
                         appname = app
+                    
+                    time = app_dict[app] 
+                    if time >= 60:
+                        minutes = time // 60
+                        hours = minutes // 60
+                        remaining_minutes = minutes % 60
+                        
+                        if remaining_minutes == 0:
+                            time = f'{hours} hour(s)'
+                        elif hours == 0:
+                            time = f'{remaining_minutes} minute(s)'
+                        else:
+                            time = f'{hours} hour(s) & {remaining_minutes} minute(s)'
+                    else:
+                        time = f'{time} second(s)'
 
                     if app not in detected_app:
-
+                                
                         #Frame for each app
                         self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=900, fg_color="#515151", border_color="red")
                         self.progress_app_frame.grid(padx=10, pady=10)
@@ -248,7 +263,7 @@ class Tabview(ctk.CTkTabview):
                         
 
                         #Label for time detected
-                        self.app_time_label = ctk.CTkLabel(self.progress_app_frame, text=f"{app_dict[app]} seconds")
+                        self.app_time_label = ctk.CTkLabel(self.progress_app_frame, text=f"{time}")
                         self.app_time_label.grid(padx=10, sticky="w")
                         apptime_label_dict[app] = self.app_time_label
                         
@@ -267,7 +282,7 @@ class Tabview(ctk.CTkTabview):
 
                     else:
                         if self.progress_scrollable.winfo_exists():
-                            apptime_label_dict[app].configure(text=f"{app_dict[app]} seconds")
+                            apptime_label_dict[app].configure(text=f"{time}")
                             appquest_label_dict[app].configure(text=f"Quest : {quest_info}")
                             appname_label_dict[app].configure(text=f"{appname}")
 
