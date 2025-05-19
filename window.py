@@ -592,14 +592,14 @@ class Tabview(ctk.CTkTabview):
 
             self.appname_widgets.append((label, entry))
 
-    def delete_quest(self):
-        global temp_quest_app, quest_list_update
+    def delete_quest(self, app_name):
+        global quest_list_update
         
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
         
         try:
-            cursor.execute("DELETE FROM quest WHERE app_name = ?", (temp_quest_app,))
+            cursor.execute("DELETE FROM quest WHERE app_name = ?", (app_name,))
             conn.commit()
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
