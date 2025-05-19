@@ -400,7 +400,7 @@ class Tabview(ctk.CTkTabview):
             sleep(update_tick)
 
     def update_stats(self): 
-        global running, update_tick, stat_update
+        global running, update_tick, stat_update, appname_dict, old_name_list
                
         while running:
             if stat_update:
@@ -418,6 +418,8 @@ class Tabview(ctk.CTkTabview):
                     
                     time_dict = {}
                     for app_name, time in app_time:
+                        if appname_dict and (app_name in old_name_list):
+                            app_name = appname_dict[app_name]
                         if app_name in time_dict:
                             time_dict[app_name] += time
                         else:   
@@ -432,6 +434,8 @@ class Tabview(ctk.CTkTabview):
                     
                     time_dict = {}
                     for app_name, time in app_time:
+                        if appname_dict and (app_name in old_name_list):
+                            app_name = appname_dict[app_name]
                         if app_name in time_dict:
                             time_dict[app_name] += time
                         else:   
