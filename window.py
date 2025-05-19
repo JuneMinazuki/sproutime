@@ -119,6 +119,8 @@ class Tabview(ctk.CTkTabview):
             scrollbar_button_hover_color=bg_color
         )
         self.quest_list_frame.pack(padx=10, pady=15)
+        
+        self.refresh_app_list()
         quest_list_update = True
 
     def create_score_widgets(self):
@@ -605,14 +607,10 @@ class Tabview(ctk.CTkTabview):
         temp_quest_tab = choice
 
     def time_callback(self, value):
-        global temp_quest_time
         self.quest_time_label.configure(text=f"{switch_var.get()}{slider_var.get()} hour(s)")
-        temp_quest_time = f"{switch_var.get()}{slider_var.get()} hour(s)"
 
     def maximum_callback(self):
-        global temp_quest_time
         self.quest_time_label.configure(text=f"{switch_var.get()}{slider_var.get()} hour(s)")
-        temp_quest_time = f"{switch_var.get()}{slider_var.get()} hour(s)"
 
     def refresh_app_list(self):
         global quest_list, temp_quest_app, temp_quest_tab
@@ -627,25 +625,10 @@ class Tabview(ctk.CTkTabview):
         temp_quest_app = app_list[0]
         temp_quest_tab = tab_list[0]
         
-        self.appname_widgets = []
-
-        for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
-
-        for i, app in enumerate(app_list):
-            label = ctk.CTkLabel(self.scrollable_frame, text=app)
-            label.grid(row=i, column=0, padx=10, pady=5)
-
-            entry = ctk.CTkEntry(self.scrollable_frame, placeholder_text="New name")
-            entry.grid(row=i, column=1, padx=10, pady=5)
-
-            self.appname_widgets.append((label, entry))
-
-    def quest_time_callback(self, current_app, slider_var, label, switch_var):
-        pass
-    
-    def quest_maximum_callback(self, current_app, switch_var, slider, label):
-        pass
+        self.check_for_chrome()
+        
+        self.app_dropdown.set(value=temp_quest_app)
+        self.tabBox.set(value=temp_quest_tab)
     
     def delete_quest(self, app_name):
         global quest_list_update
@@ -663,10 +646,13 @@ class Tabview(ctk.CTkTabview):
             if conn:
                 conn.close()
         
+        quest_list.remove(app_name)
+        self.refresh_app_list()
+        
         quest_list_update = True
 
     def update_quest_frame(self, max_switch, time_slider, current_app, new_name_widget):
-        global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update, appname_dict, quest_complete_update, old_name_list, app_time_update
+        global temp_quest_app, temp_quest_tab, quest_list_update, appname_dict, quest_complete_update, old_name_list, app_time_update
         
         app_name = current_app
         maximum = 1 if max_switch.get() == '>' else 0
@@ -715,11 +701,9 @@ class Tabview(ctk.CTkTabview):
         quest_complete_update = True
         
     def save_quest_time(self):
-        global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update
-        max_map = {'>': 1, '<': 0}
-        time_map = {'1 hour(s)': 60, '2 hour(s)': 120, '3 hour(s)': 180}
-        maximum = max_map.get(temp_quest_time[0])
-        minutes = time_map.get(temp_quest_time[1:])
+        global temp_quest_app, temp_quest_tab, quest_list_update
+        maximum = 1 if switch_var.get() == '>' else 0
+        minutes = slider_var.get() * 60
         name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
 
         conn = sqlite3.connect('sproutime.db')
@@ -736,6 +720,7 @@ class Tabview(ctk.CTkTabview):
                 conn.close()
             
         check_quest(app_name)
+        self.refresh_app_list()
 
         quest_list_update = True
         
@@ -1479,7 +1464,6 @@ update_tick = 1 if DEBUG else 60
 app_dict = {}
 temp_quest_app = ""
 temp_quest_tab = ""
-temp_quest_time = ""
 web_browser = ["Google Chrome"]
 quest_list = []
 quest_dict = {}
@@ -1520,8 +1504,6 @@ stat_update = True
 running = True
 
 load_past_data()
-time_list = [">1 hour(s)", ">2 hour(s)", '>3 hour(s)', '<1 hour(s)', '<2 hour(s)']
-temp_quest_time = time_list[0]
 app_list = get_all_app_list()
 constant_tab_list = ["Youtube", "Reddit", "Instagram", "Facebook", "Linkedin"]
 tab_list = [tab for tab in constant_tab_list if tab not in quest_list]
