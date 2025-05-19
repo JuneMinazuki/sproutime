@@ -66,34 +66,43 @@ class Tabview(ctk.CTkTabview):
     def create_quest_widgets(self):
         global quest_list_update
         self.quest_tab = self.add("Quest")
+        
+        self.quest_vars = {}
+        self.quest_widgets = {}
 
         self.set_quest_frame = ctk.CTkFrame(self.quest_tab)
         self.set_quest_frame.pack(padx=100, fill="x")
         
-        for col in range(3):
-            self.set_quest_frame.columnconfigure(col, weight=1)
+        self.set_quest_frame.columnconfigure((0,1), weight=1)
         
         #App Option
         self.app_dropdown = ctk.CTkComboBox(self.set_quest_frame,values=app_list, command=self.combobox_callback)
-        self.app_dropdown.grid(row=0, column=0, padx=10, pady=20, sticky='w')
-
+        self.app_dropdown.grid(row=0, column=0, padx=10, pady=(20,0), sticky='w')
+        
+        #Maximum Option
+        self.maximum_switch = ctk.CTkSwitch(master=self.set_quest_frame, text="", command=self.maximum_callback, variable=switch_var, onvalue=">", offvalue="<")
+        self.maximum_switch.grid(row=0, column=2, padx=(10,0), pady=(20,0), sticky='e')
+        
         #Time Option
-        self.time_dropdown = ctk.CTkComboBox(self.set_quest_frame,values=time_list, command=self.timebox_callback)
-        self.time_dropdown.grid(row=0, column=2, padx=10, pady=20, sticky='e')
+        self.time_dropdown = ctk.CTkSlider(master=self.set_quest_frame, from_=1, to=12, number_of_steps=12, variable=slider_var, command=self.time_callback)
+        self.time_dropdown.grid(row=0, column=3, padx=(0,10), pady=(20,0), sticky='e')
+        
+        self.quest_time_label = ctk.CTkLabel(self.set_quest_frame, text=f"{switch_var.get()}{slider_var.get()} hour(s)")
+        self.quest_time_label.grid(row=1, column=3, padx=10, pady=(0,20), sticky='e')
 
         #Chrome Tab Option (only shown whenever Chrome is selected in the App Option, refer to combobox_callback)
         self.tabBox = ctk.CTkComboBox(self.set_quest_frame, values=tab_list, command=self.tabBox_callback)
-        self.tabBox.grid(row=0, column=1, sticky="e")
+        self.tabBox.grid(row=0, column=1, pady=(20,0), sticky="w")
         self.tabBox.set(tab_list[0])
         self.check_for_chrome()    
         
         #Refresh Button
         self.refresh_button = ctk.CTkButton(self.set_quest_frame, text="Refresh", command=self.refresh_app_list)
-        self.refresh_button.grid(row=1, column=0, padx=10, pady=20, sticky='w')
+        self.refresh_button.grid(row=2, column=0, padx=10, pady=20, sticky='w')
         
         #Save Button
         self.save_button = ctk.CTkButton(self.set_quest_frame, text="Save", command=self.save_quest_time)
-        self.save_button.grid(row=1, column=2, padx=10, pady=20, sticky='e')
+        self.save_button.grid(row=2, column=3, padx=10, pady=20, sticky='e')
 
         #Quest Saved Textbox
         self.quest_list_frame = ctk.CTkScrollableFrame(self.quest_tab, width=1080, height=430)
@@ -260,7 +269,6 @@ class Tabview(ctk.CTkTabview):
                         self.app_label = ctk.CTkLabel(self.progress_app_frame, text=f"{appname}", font=(None, 15, "bold"))
                         self.app_label.grid(padx=10, pady=(20,0), sticky="w")
                         appname_label_dict[app] = self.app_label
-                        
 
                         #Label for time detected
                         self.app_time_label = ctk.CTkLabel(self.progress_app_frame, text=f"{time}")
@@ -332,7 +340,7 @@ class Tabview(ctk.CTkTabview):
                         quest_box.grid_propagate(False)
                         
                         #Quest Name
-                        quest_name_label = ctk.CTkLabel(quest_box, text=f'{app_name}')
+                        quest_name_label = ctk.CTkLabel(quest_box, text=f'{app_name}', font=(None, 15, "bold"))
                         quest_name_label.grid(row=0, column=0, sticky="w", padx=30, pady=10)
                         
                         #Quest Time
@@ -576,9 +584,15 @@ class Tabview(ctk.CTkTabview):
         global temp_quest_tab
         temp_quest_tab = choice
 
-    def timebox_callback(self, choice):
+    def time_callback(self, value):
         global temp_quest_time
-        temp_quest_time = choice
+        self.quest_time_label.configure(text=f"{switch_var.get()}{slider_var.get()} hour(s)")
+        temp_quest_time = f"{switch_var.get()}{slider_var.get()} hour(s)"
+
+    def maximum_callback(self):
+        global temp_quest_time
+        self.quest_time_label.configure(text=f"{switch_var.get()}{slider_var.get()} hour(s)")
+        temp_quest_time = f"{switch_var.get()}{slider_var.get()} hour(s)"
 
     def refresh_app_list(self):
         global quest_list, temp_quest_app, temp_quest_tab
@@ -1449,6 +1463,8 @@ completed_list = []
 failed_list = []
 total_points = 0    # Right now +100 per completed quest
 task_score = 100
+slider_var = ctk.IntVar(value=1)
+switch_var = ctk.StringVar(value=">")
 
 # Progress Tab UI
 progressbar_dict = {}
