@@ -47,19 +47,14 @@ class Tabview(ctk.CTkTabview):
         self.create_score_widgets()
         self.create_stats_widgets()
         self.create_setting_widgets()
-        self.create_bar_widgets()
 
         self.start_updating()
 
     def create_progress_widgets(self):
         self.progress_tab = self.add("Progress")
 
-        #Textbox
-        self.app_list_TB = ctk.CTkTextbox(self.progress_tab, width=1080, height=180)
-        self.app_list_TB.grid(row=0, column=0, columnspan=4)
-
         #Scrollable frame for progress bar
-        self.progress_scrollable = ctk.CTkScrollableFrame(self.progress_tab, width=1080, height=400)
+        self.progress_scrollable = ctk.CTkScrollableFrame(self.progress_tab, width=1080, height=600)
         self.progress_scrollable.grid(row=1, column=0, columnspan=4)
 
         for col in range(3):
@@ -208,178 +203,11 @@ class Tabview(ctk.CTkTabview):
         self.debug_button = ctk.CTkButton(master=self.setting_tab, text="Debug", command=self.open_debug_menu)
         self.debug_button.pack(padx=20, pady=10)
 
-    def create_bar_widgets(self):
-        self.bar_tab = self.add("Progress Bar")
-        # get data from database
-        global quest_list_update
-        conn = sqlite3.connect('sproutime.db')
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT app_name, maximum, time FROM quest")
-            quests = cursor.fetchall()
-            bar_quest_list = []
-            for app_name, sign, time in quests:
-                maximum = ">" if sign == 1 else "<"
-                bar_quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
-            conn.rollback()
-        finally:
-            if conn:
-                conn.close()
-
-        # if quest_list is empty, set to "No quests available" until not empty and updated to dropdown
-        if not bar_quest_list:
-            bar_quest_list = ["No quests available"]
-        #Quest Option
-        self.quest_dropdown = ctk.CTkComboBox(self.bar_tab, values=bar_quest_list, command=self.combobox_callback)
-        self.quest_dropdown.pack(pady=10, padx=10)
-        self.quest_dropdown.set(bar_quest_list[0])  # Set default value
-        
-        # Add Refresh Button for Progress Bar Tab
-        self.refresh_bar_button = ctk.CTkButton(self.bar_tab, text="Refresh", command=self.refresh_bar_tab)
-        self.refresh_bar_button.pack(pady=10)
-
-        #Add Progress Bar Button
-        self.add_progress_button = ctk.CTkButton(self.bar_tab, text="Add", command=self.add_progress_bar)
-        self.add_progress_button.pack(pady=10)
-        # if quest_dropdown choose "No quests available", disable the button
-        if self.quest_dropdown.get() == "No quests available":
-            self.add_progress_button.configure(state="disabled")
-        else:
-            self.add_progress_button.configure(state="normal")
-
-        self.progress_frame = ctk.CTkFrame(self.bar_tab)
-        self.progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        self.progress_bars = []
-        
-    def add_progress_bar(self):
-        global quest_list, quest_list_update, quest_dict
-        # Frame for each progress bar
-        bar_frame = ctk.CTkFrame(self.progress_frame)
-        bar_frame.pack(fill="x", pady=5)
-        
-        # get the selected quest from dropdown out of the frame
-        selected_quest = self.quest_dropdown.get()
-        if selected_quest:
-            # Extract app name, maximum, and time from the selected quest
-            app_name, maximum_time = selected_quest.split(" : ")
-            maximum, time, unit = maximum_time.split(" ")
-            time = (float(time) * 60)
-            label_text = f"{app_name} : {maximum} {time / 60} hour"
-            # Create a label for the progress bar
-            label = ctk.CTkLabel(bar_frame, text=label_text)
-            label.pack(pady=5)
-        
-        
-
-
-        # Progress bar
-        progress_bar = ctk.CTkProgressBar(bar_frame)
-        progress_bar.set(0)  # Set initial progress to 0%
-        progress_bar.pack(fill="x", padx=5, pady=5)
-        bar_frame.progress_bar = progress_bar  # Store reference to the progress bar in the frame        
-
-        # Delete button
-        delete_button = ctk.CTkButton(bar_frame, text="Delete", width=80, command=lambda: self.delete_progress_bar(bar_frame))
-        delete_button.pack(pady=5)
-
-        self.progress_bars.append(bar_frame)
-        
-
-    def refresh_bar_tab(self):
-        # Remove all progress bars
-        for bar_frame in self.progress_bars:
-            bar_frame.destroy()
-        self.progress_bars.clear()
-
-        # Refresh quest list from database
-        global quest_list
-        conn = sqlite3.connect('sproutime.db')
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT app_name, maximum, time FROM quest")
-            quests = cursor.fetchall()
-            bar_quest_list = []
-            for app_name, sign, time in quests:
-                maximum = ">" if sign == 1 else "<"
-                bar_quest_list.append(f"{app_name} : {maximum} {time / 60} hour")
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
-            conn.rollback()
-        finally:
-            if conn:
-                conn.close()
-
-        # If quest_list is empty, set to "No quests available"
-        if not quest_list:
-            quest_list = ["No quests available"]
-
-        # Update dropdown values and reset selection
-        self.quest_dropdown.configure(values=quest_list)
-        self.quest_dropdown.set(quest_list[0])
-
-        # Re-enable the add button if there are quests available
-        if self.quest_dropdown.get() == "No quests available":
-            self.add_progress_button.configure(state="disabled")
-        else:
-            self.add_progress_button.configure(state="normal")
-
-    def delete_progress_bar(self, bar_frame):
-        bar_frame.destroy()
-        self.progress_bars.remove(bar_frame)
-
-    def update_progress_bar(self,bar_frame):
-        global app_dict
-        
-        selected_quest = self.quest_dropdown.get()
-        # if selected quest is in quest_list, extract quest_list
-        if selected_quest:
-            app_name, maximum_time = selected_quest.split(" : ")
-            maximum, time, _ = maximum_time.split(" ")
-            time = (float(time) * 3600)
-            
-            if app_name in app_dict:
-                current_time = app_dict[app_name]
-            else:
-                current_time = 0
-            
-            # get the current progress of the bar
-            current_value = bar_frame.progress_bar.get()
-            
-            # calculate the new value until it reaches max (1.0) using do until
-            if current_value < 1.0:
-                new_value = current_time / time  # increase by 1% of the total time
-                bar_frame.progress_bar.set(new_value)
-                self.update_idletasks()
-                # if the progress bar reaches 100%, show a message box
-            
-           
-            
-        
-                    
-                    
-  
-
-    
-
-
     def update_progress(self):
-        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, quest_list
-        
+        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, quest_list, detected_app, apptime_label_dict, appquest_label_dict, appname_label_dict
         while running:
             if app_time_update:
-                self.app_list_TB.delete("0.0", "end")
-                for widget in self.progress_scrollable.winfo_children():
-                    widget.destroy()
                 for app in app_dict:
-                    if appname_dict and app in old_name_list:
-                        appname = appname_dict[app]
-                    else:
-                        appname = app
-                    self.app_list_TB.insert("end", f'{appname}: {app_dict[app]} seconds\n')
-                    
                     conn = sqlite3.connect('sproutime.db')
                     cursor = conn.cursor()
 
@@ -402,22 +230,56 @@ class Tabview(ctk.CTkTabview):
                         if conn:
                             conn.close()
 
-                    #Label for app info
-                    self.app_label = ctk.CTkLabel(self.progress_scrollable, text=f"{appname} : {app_dict[app]} seconds")
-                    self.app_label.grid(pady=(20,0), sticky="w")
-                    
-                    #Label for quest info
-                    self.quest_label = ctk.CTkLabel(self.progress_scrollable, text=f"Quest : {quest_info}")
-                    self.quest_label.grid(pady=(0,10), sticky="w")
+                    if appname_dict and app in old_name_list:
+                        appname = appname_dict[app]
+                    else:
+                        appname = app
 
-                    #Progress bar
-                    self.progress_bar = ctk.CTkProgressBar(self.progress_scrollable, width=800)
-                    self.progress_bar.grid(pady=(0,20))
-                    self.progress_bar.set(0)
-                    progressbar_dict[app] = self.progress_bar
+                    if app not in detected_app:
+
+                        #Frame for each app
+                        self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=900, fg_color="#515151", border_color="red")
+                        self.progress_app_frame.grid(padx=10, pady=10)
+
+                        #Label for app name
+                        self.app_label = ctk.CTkLabel(self.progress_app_frame, text=f"{appname}", font=(None, 15, "bold"))
+                        self.app_label.grid(padx=10, pady=(20,0), sticky="w")
+                        appname_label_dict[app] = self.app_label
+                        
+
+                        #Label for time detected
+                        self.app_time_label = ctk.CTkLabel(self.progress_app_frame, text=f"{app_dict[app]} seconds")
+                        self.app_time_label.grid(padx=10, sticky="w")
+                        apptime_label_dict[app] = self.app_time_label
+                        
+                        #Label for quest info
+                        self.quest_label = ctk.CTkLabel(self.progress_app_frame, text=f"Quest : {quest_info}")
+                        self.quest_label.grid(padx=10, pady=(0,10), sticky="w")
+                        appquest_label_dict[app] = self.quest_label
+
+                        #Progress bar
+                        self.progress_bar = ctk.CTkProgressBar(self.progress_app_frame, width=800)
+                        self.progress_bar.grid(padx=10, pady=(0,20))
+                        self.progress_bar.set(0)
+                        progressbar_dict[app] = self.progress_bar
+
+                        detected_app.append(app)
+
+                    else:
+                        if self.progress_scrollable.winfo_exists():
+                            apptime_label_dict[app].configure(text=f"{app_dict[app]} seconds")
+                            appquest_label_dict[app].configure(text=f"Quest : {quest_info}")
+                            appname_label_dict[app].configure(text=f"{appname}")
+
 
                     if app in quest_list:
                         progressbar_dict[app].set(app_dict[app] / (result[0] * 60))
+
+                for app in detected_app:
+                    if app not in app_dict:
+                        detected_app.clear()
+                        for widget in self.progress_scrollable.winfo_children():
+                            widget.destroy()
                     
                 app_time_update = False
             sleep(update_tick)
@@ -646,7 +508,6 @@ class Tabview(ctk.CTkTabview):
         self.quest_active = tab == "Quest"
         self.score_active = tab == "Score"
         self.stats_active = tab == "Stats"
-        self.bar_active = tab == "Progress Bar"
 
         #Progess Tab
         if self.progress_active and (self.progress_thread is None or not self.progress_thread.is_alive()):
@@ -679,19 +540,6 @@ class Tabview(ctk.CTkTabview):
         elif not self.stats_active and self.stats_thread and self.stats_thread.is_alive():
             # The thread will naturally pause in its while loop
             pass
-        
-        #Bar Tab
-        if self.bar_active and (self.bar_thread is None or not self.bar_thread.is_alive()):
-            self.bar_thread = threading.Thread(target=self.update_bar_tab, daemon=True)
-            self.bar_thread.start()
-        elif not self.bar_active and self.bar_thread and self.bar_thread.is_alive():
-            pass
-
-    def update_bar_tab(self):
-        while self.bar_active:
-            for bar_frame in self.progress_bars:
-                self.update_progress_bar(bar_frame)
-            sleep(1)       
 
     def tab_changed(self):
         self.start_updating()
@@ -763,7 +611,7 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
 
     def update_quest_frame(self, dropdown_widget, app_name, new_name_widget):
-        global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update, appname_dict, quest_complete_update, old_name_list
+        global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update, appname_dict, quest_complete_update, old_name_list, app_time_update
         max_map = {'>': 1, '<': 0}
         time_map = {'1 hour(s)': 60, '2 hour(s)': 120, '3 hour(s)': 180}
         
@@ -998,7 +846,7 @@ class DebugMenu(ctk.CTkToplevel):
         self.time_speed_label = ctk.CTkLabel(master=self, text="Speed Up")
         self.time_speed_label.grid(row=0, column=0, padx=20, pady=10, sticky='w')
         self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text='', variable=_d_time_speed,
-                                                    onvalue=600, offvalue=1, width=10)
+                                                    onvalue=3600, offvalue=1, width=10)
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
         
         #Clear quest
@@ -1331,7 +1179,7 @@ def notify(app_name, info):
         noti.show()
 
 def load_past_data():
-    global app_time_update, app_dict, completed_list, failed_list, total_points, appname_dict, old_name_list, quest_list, quest_dict
+    global app_time_update, app_dict, completed_list, failed_list, total_points, appname_dict, old_name_list, quest_list, quest_dict, detected_app
     
     app_dict = {}
     quest_list = []
@@ -1350,7 +1198,7 @@ def load_past_data():
         
         for app in apps:
             app_dict[app[0]] = app[1]
-            
+
         #Completed quest
         cursor.execute("SELECT app_name, maximum FROM quest_completion WHERE date = ?", (str(date.today()),))
         quests = cursor.fetchall()
@@ -1586,7 +1434,13 @@ completed_list = []
 failed_list = []
 total_points = 0    # Right now +100 per completed quest
 task_score = 100
+
+# Progress Tab UI
 progressbar_dict = {}
+detected_app = []
+appname_label_dict = {}
+apptime_label_dict = {}
+appquest_label_dict = {}
 
 google = "Google Chrome"
 
