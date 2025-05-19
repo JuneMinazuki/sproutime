@@ -54,8 +54,14 @@ class Tabview(ctk.CTkTabview):
         self.progress_tab = self.add("Progress")
 
         #Scrollable frame for progress bar
-        self.progress_scrollable = ctk.CTkScrollableFrame(self.progress_tab, width=1080, height=600)
-        self.progress_scrollable.grid(row=1, column=0, columnspan=4)
+        self.progress_scrollable = ctk.CTkScrollableFrame(self.progress_tab, width=1080, height=500)
+        self.progress_scrollable.pack(padx=10, pady=20)
+        bg_color = self.progress_scrollable.cget("fg_color") # Get the background color of the scrollable frame
+        self.progress_scrollable.configure( # Hide the scrollbar by making its colors the same as the background
+            scrollbar_fg_color=bg_color,
+            scrollbar_button_color=bg_color,
+            scrollbar_button_hover_color=bg_color
+        )
 
         for col in range(3):
             self.progress_tab.columnconfigure(col, weight=1)
@@ -98,21 +104,21 @@ class Tabview(ctk.CTkTabview):
         
         #Refresh Button
         self.refresh_button = ctk.CTkButton(self.set_quest_frame, text="Refresh", command=self.refresh_app_list)
-        self.refresh_button.grid(row=2, column=0, padx=10, pady=20, sticky='w')
+        self.refresh_button.grid(row=2, column=0, padx=10, pady=10, sticky='w')
         
         #Save Button
         self.save_button = ctk.CTkButton(self.set_quest_frame, text="Save", command=self.save_quest_time)
-        self.save_button.grid(row=2, column=3, padx=10, pady=20, sticky='e')
+        self.save_button.grid(row=2, column=3, padx=10, pady=10, sticky='e')
 
-        #Quest Saved Textbox
-        self.quest_list_frame = ctk.CTkScrollableFrame(self.quest_tab, width=1080, height=430)
+        #Quest Saved Frame
+        self.quest_list_frame = ctk.CTkScrollableFrame(self.quest_tab, width=1080, height=400)
         bg_color = self.quest_list_frame.cget("fg_color") # Get the background color of the scrollable frame
         self.quest_list_frame.configure( # Hide the scrollbar by making its colors the same as the background
             scrollbar_fg_color=bg_color,
             scrollbar_button_color=bg_color,
             scrollbar_button_hover_color=bg_color
         )
-        self.quest_list_frame.pack(padx=10, pady=20)
+        self.quest_list_frame.pack(padx=10, pady=15)
         quest_list_update = True
 
     def create_score_widgets(self):
@@ -262,8 +268,9 @@ class Tabview(ctk.CTkTabview):
                     if app not in detected_app:
                                 
                         #Frame for each app
-                        self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=900, fg_color="#515151", border_color="red")
-                        self.progress_app_frame.grid(padx=10, pady=10)
+                        self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=1080, height=150, fg_color="#515151", border_color="red")
+                        self.progress_app_frame.pack(padx=10, pady=10)
+                        self.progress_app_frame.grid_propagate(False)
 
                         #Label for app name
                         self.app_label = ctk.CTkLabel(self.progress_app_frame, text=f"{appname}", font=(None, 15, "bold"))
@@ -281,7 +288,7 @@ class Tabview(ctk.CTkTabview):
                         appquest_label_dict[app] = self.quest_label
 
                         #Progress bar
-                        self.progress_bar = ctk.CTkProgressBar(self.progress_app_frame, width=800)
+                        self.progress_bar = ctk.CTkProgressBar(self.progress_app_frame, width=1040, fg_color="#2D2D2D")
                         self.progress_bar.grid(padx=10, pady=(0,20))
                         self.progress_bar.set(0)
                         progressbar_dict[app] = self.progress_bar
@@ -334,31 +341,44 @@ class Tabview(ctk.CTkTabview):
                             app_name = app
                             custom_name = 'Custom Name'
                         
-                        quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=100)
+                        quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=150)
                         quest_box.pack(pady=5)
                         quest_box.grid_columnconfigure((0), weight=1)
                         quest_box.grid_propagate(False)
                         
+                        maximum_switch_var = ctk.StringVar(value=maximum)
+                        time_slider_var = ctk.IntVar(value=int(time / 60))
+                        
                         #Quest Name
                         quest_name_label = ctk.CTkLabel(quest_box, text=f'{app_name}', font=(None, 15, "bold"))
                         quest_name_label.grid(row=0, column=0, sticky="w", padx=30, pady=10)
+
+                        # Time Label
+                        time_label = ctk.CTkLabel(quest_box, text=f"{maximum_switch_var.get()}{time_slider_var.get()} hour(s)")
+                        time_label.grid(row=1, column=2, padx=(0, 30), pady=(0, 10), sticky='e')
                         
-                        #Quest Time
-                        quest_time_dropdown = ctk.CTkComboBox(quest_box, values=time_list)
-                        quest_time_dropdown.set(f"{maximum}{time // 60} hour(s)")
-                        quest_time_dropdown.grid(row=0, column=2, sticky="e", padx=30, pady=10)
+                        # Time Option
+                        time_slider = ctk.CTkSlider(quest_box, from_=1, to=12, number_of_steps=11, variable=time_slider_var, fg_color="#2D2D2D",
+                                                   command=lambda slider_var=time_slider_var.get(), switch_var=maximum_switch_var, label=time_label: label.configure(text=f"{switch_var.get()}{int(slider_var)} hour(s)"))
+                        time_slider.grid(row=0, column=2, padx=(0, 10), pady=10, sticky='e')
+                        
+                        # Maximum Option
+                        maximum_switch = ctk.CTkSwitch(quest_box, text="",
+                                                       variable=maximum_switch_var, onvalue=">", offvalue="<",
+                                                       command=lambda slider_var=time_slider_var.get(), switch_var=maximum_switch_var, label=time_label: label.configure(text=f"{switch_var.get()}{int(slider_var)} hour(s)"))
+                        maximum_switch.grid(row=0, column=1, padx=(10, 0), pady=10, sticky='e')
                         
                         #Change Name 
                         entry = ctk.CTkEntry(quest_box, placeholder_text=custom_name)
-                        entry.grid(row=1, column=0, padx=30, pady=5, sticky="w")
+                        entry.grid(row=2, column=0, padx=30, pady=5, sticky="w")
             
                         #Delete Button
                         delete_button = ctk.CTkButton(quest_box, text="Delete", command=lambda current_app=app: self.delete_quest(current_app))
-                        delete_button.grid(row=1, column=1, padx=(0, 5), pady=10, sticky="e")
+                        delete_button.grid(row=2, column=1, padx=(0, 5), pady=10, sticky="e")
 
                         #Update Button
-                        save_button = ctk.CTkButton(quest_box, text="Update", command=lambda dropdown=quest_time_dropdown, current_app=app, new_name_widget=entry: self.update_quest_frame(dropdown, current_app, new_name_widget))
-                        save_button.grid(row=1, column=2, padx=(5, 30), pady=10, sticky='e')
+                        save_button = ctk.CTkButton(quest_box, text="Update", command=lambda max_switch=maximum_switch, time_slider=time_slider, current_app=app, new_name_widget=entry: self.update_quest_frame(max_switch, time_slider, current_app, new_name_widget))
+                        save_button.grid(row=2, column=2, padx=(5, 30), pady=10, sticky='e')
                         
                         quest_list.append(app)
                         quest_dict[app] = {"maximum": maximum, "time": time * 60}
@@ -621,6 +641,12 @@ class Tabview(ctk.CTkTabview):
 
             self.appname_widgets.append((label, entry))
 
+    def quest_time_callback(self, current_app, slider_var, label, switch_var):
+        pass
+    
+    def quest_maximum_callback(self, current_app, switch_var, slider, label):
+        pass
+    
     def delete_quest(self, app_name):
         global quest_list_update
         
@@ -639,14 +665,12 @@ class Tabview(ctk.CTkTabview):
         
         quest_list_update = True
 
-    def update_quest_frame(self, dropdown_widget, app_name, new_name_widget):
+    def update_quest_frame(self, max_switch, time_slider, current_app, new_name_widget):
         global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update, appname_dict, quest_complete_update, old_name_list, app_time_update
-        max_map = {'>': 1, '<': 0}
-        time_map = {'1 hour(s)': 60, '2 hour(s)': 120, '3 hour(s)': 180}
         
-        selected_time = dropdown_widget.get()
-        maximum = max_map.get(selected_time[0])
-        minutes = time_map.get(selected_time[1:])
+        app_name = current_app
+        maximum = 1 if max_switch.get() == '>' else 0
+        minutes = (time_slider.get() * 60)
         new_name = new_name_widget.get().strip()
 
         conn = sqlite3.connect('sproutime.db')
@@ -1358,9 +1382,9 @@ def check_quest(app_name):
                 notify(app_name, "10 mins left")
                 
         elif (quest_dict[app_name]["maximum"] == "<") and (app_name not in completed_list):
-            cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
-            quest_time = cursor.fetchone()[0]
-            
+            conn = sqlite3.connect('sproutime.db')
+            cursor = conn.cursor()
+
             try:
                 cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
                 quest = cursor.fetchone()
