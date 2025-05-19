@@ -245,7 +245,6 @@ class Tabview(ctk.CTkTabview):
                         self.app_label = ctk.CTkLabel(self.progress_app_frame, text=f"{appname}", font=(None, 15, "bold"))
                         self.app_label.grid(padx=10, pady=(20,0), sticky="w")
                         appname_label_dict[app] = self.app_label
-                        
 
                         #Label for time detected
                         self.app_time_label = ctk.CTkLabel(self.progress_app_frame, text=f"{app_dict[app]} seconds")
@@ -645,9 +644,9 @@ class Tabview(ctk.CTkTabview):
                     cursor.execute("SELECT * FROM new_app_name WHERE old_name = ?", (app_name,))
                     row = cursor.fetchone()
                     if row:
-                        cursor.execute("UPDATE new_app_name SET new_name = ? WHERE old_name = ?", (new_name, app_name))
+                        cursor.execute("UPDATE new_app_name SET new_name = ?, date = ? WHERE old_name = ?", (new_name, str(date.today()), app_name))
                     else:
-                        cursor.execute("INSERT INTO new_app_name (old_name, new_name) VALUES (?, ?)", (app_name, new_name))
+                        cursor.execute("INSERT INTO new_app_name (old_name, new_name, date) VALUES (?, ?, ?)", (app_name, new_name, str(date.today())))
                 else:
                     appname_dict.pop(app_name, None)
                     cursor.execute("DELETE FROM new_app_name WHERE old_name = ? ", (app_name,))
@@ -1031,7 +1030,8 @@ def setup_sql():
                 CREATE TABLE IF NOT EXISTS new_app_name(
                     id INTEGER PRIMARY KEY,
                     old_name TEXT NOT NULL,
-                    new_name TEXT
+                    new_name TEXT,
+                    date TEXT NOT NULL --Store as YYYY-MM-DD
             );
         ''')
 
