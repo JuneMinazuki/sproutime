@@ -58,6 +58,10 @@ class Tabview(ctk.CTkTabview):
         self.app_list_TB = ctk.CTkTextbox(self.progress_tab, width=1080, height=180)
         self.app_list_TB.grid(row=0, column=0, columnspan=4)
 
+        #Scrollable frame for progress bar
+        self.progress_scrollable = ctk.CTkScrollableFrame(self.progress_tab, width=1080, height=400)
+        self.progress_scrollable.grid(row=1, column=0, columnspan=4)
+
         for col in range(3):
             self.progress_tab.columnconfigure(col, weight=1)
 
@@ -362,17 +366,59 @@ class Tabview(ctk.CTkTabview):
 
 
     def update_progress(self):
-        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list
+        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, quest_list
         
         while running:
             if app_time_update:
                 self.app_list_TB.delete("0.0", "end")
+                for widget in self.progress_scrollable.winfo_children():
+                    widget.destroy()
                 for app in app_dict:
                     if appname_dict and app in old_name_list:
-                        self.app_list_TB.insert("end", f'{appname_dict[app]}: {app_dict[app]} seconds\n')
+                        appname = appname_dict[app]
                     else:
-                        self.app_list_TB.insert("end", f'{app}: {app_dict[app]} seconds\n')
-                
+                        appname = app
+                    self.app_list_TB.insert("end", f'{appname}: {app_dict[app]} seconds\n')
+                    
+                    conn = sqlite3.connect('sproutime.db')
+                    cursor = conn.cursor()
+
+                    try:
+                        cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app,)) 
+                        result = cursor.fetchone()
+                        if result:
+                            time = result[0] / 60
+                            if result[1] == 1:
+                                maximum = ">"
+                            elif result[1] == 0:
+                                maximum = "<"
+                            quest_info = f"{maximum} {time} hour(s)"
+                        else:
+                            quest_info = "No quest set"
+                    except sqlite3.Error as e:
+                        if DEBUG: print(f"An error occurred: {e}")
+                        conn.rollback()
+                    finally:
+                        if conn:
+                            conn.close()
+
+                    #Label for app info
+                    self.app_label = ctk.CTkLabel(self.progress_scrollable, text=f"{appname} : {app_dict[app]} seconds")
+                    self.app_label.grid(pady=(20,0), sticky="w")
+                    
+                    #Label for quest info
+                    self.quest_label = ctk.CTkLabel(self.progress_scrollable, text=f"Quest : {quest_info}")
+                    self.quest_label.grid(pady=(0,10), sticky="w")
+
+                    #Progress bar
+                    self.progress_bar = ctk.CTkProgressBar(self.progress_scrollable, width=800)
+                    self.progress_bar.grid(pady=(0,20))
+                    self.progress_bar.set(0)
+                    progressbar_dict[app] = self.progress_bar
+
+                    if app in quest_list:
+                        progressbar_dict[app].set(app_dict[app] / (result[0] * 60))
+                    
                 app_time_update = False
             sleep(update_tick)
 
@@ -952,7 +998,7 @@ class DebugMenu(ctk.CTkToplevel):
         self.time_speed_label = ctk.CTkLabel(master=self, text="Speed Up")
         self.time_speed_label.grid(row=0, column=0, padx=20, pady=10, sticky='w')
         self.time_speed_checkbox = ctk.CTkCheckBox(master=self, text='', variable=_d_time_speed,
-                                                    onvalue=3600, offvalue=1, width=10)
+                                                    onvalue=600, offvalue=1, width=10)
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
         
         #Clear quest
@@ -1540,6 +1586,7 @@ completed_list = []
 failed_list = []
 total_points = 0    # Right now +100 per completed quest
 task_score = 100
+progressbar_dict = {}
 
 google = "Google Chrome"
 
