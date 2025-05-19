@@ -130,14 +130,6 @@ class Tabview(ctk.CTkTabview):
         self.completed_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
         self.completed_list_TB.grid(row=0, column=0, columnspan=3)
 
-        #Name Change Log
-        self.namechange_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
-        self.namechange_list_TB.grid(row=1, column=0, columnspan=3)
-
-        #Failed Quests Textbox
-        self.failed_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
-        self.failed_list_TB.grid(row=2, column=0, columnspan=3)
-
         for col in range(1):
             self.score_tab.columnconfigure(col, weight=1)
         
@@ -395,7 +387,7 @@ class Tabview(ctk.CTkTabview):
             sleep(update_tick)
             
     def update_score(self):
-        global running, quest_complete_update, update_tick, old_name_list
+        global running, quest_complete_update, update_tick, old_name_list, activity_log_dict
         
         while running:
             if quest_complete_update:
@@ -403,7 +395,7 @@ class Tabview(ctk.CTkTabview):
                 cursor = conn.cursor()
                 
                 try:
-                    cursor.execute("SELECT app_name, time, maximum, score_earn FROM quest_completion")
+                    cursor.execute("SELECT app_name, time, maximum, score_earn, timestamp FROM quest_completion")
                     quests = cursor.fetchall()
                     
                     self.completed_list_TB.delete("0.0", "end")
@@ -411,28 +403,26 @@ class Tabview(ctk.CTkTabview):
                         maximum = ">" if quest[2] == 1 else "<"
                         
                         if appname_dict and quest[0] in old_name_list:
-                            self.completed_list_TB.insert("end", f'{appname_dict[quest[0]]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
+                            activity_log_dict[quest[4]] = f'{appname_dict[quest[0]]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points'
                         else:
-                            self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
+                            activity_log_dict[quest[4]] = f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points'
                 
                     # Failed Quest Textbox Update
-                    self.failed_list_TB.delete("0.0", "end")
-                    cursor.execute("SELECT app_name, time, score_deduct FROM failed_quests")
+                    cursor.execute("SELECT app_name, time, score_deduct, timestamp FROM failed_quests")
                     failed_quests = cursor.fetchall()
 
                     for quest in failed_quests:
                         if appname_dict and quest[0] in old_name_list:
-                            self.failed_list_TB.insert("end", f'{appname_dict[quest[0]]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points\n')
+                            activity_log_dict[quest[3]] = f'{appname_dict[quest[0]]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points'
                         else:
-                            self.failed_list_TB.insert("end", f'{quest[0]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points\n')
+                            activity_log_dict[quest[3]] = f'{quest[0]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points'
 
                     # App Name Change Log
-                    cursor.execute("SELECT old_name, new_name FROM new_app_name")
+                    cursor.execute("SELECT old_name, new_name, timestamp FROM new_app_name")
                     names = cursor.fetchall()
 
-                    self.namechange_list_TB.delete("0.0", "end")
                     for name in names:
-                        self.namechange_list_TB.insert("end", f""" "{name[0]}" was changed into "{name[1]}"\n""")
+                        activity_log_dict[name[2]] = f'''"{name[0]}" was changed into "{name[1]}"'''
 
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An error occurred: {e}")
@@ -440,6 +430,11 @@ class Tabview(ctk.CTkTabview):
                 finally:
                     if conn:
                         conn.close()
+                
+                sorted_activity_log_dict = dict(sorted(activity_log_dict.items(), key=lambda x: datetime.strptime(x[0], "%H:%M:%S").time()))
+                for time, info in sorted_activity_log_dict.items():
+                    self.completed_list_TB.insert("end", f"{time} -->> {info}\n")
+
 
                 quest_complete_update = False
             sleep(update_tick)
@@ -681,12 +676,13 @@ class Tabview(ctk.CTkTabview):
                 if new_name != app_name:
                     appname_dict[app_name] = new_name
                     old_name_list.append(app_name)
+                    current_time = datetime.now().strftime("%H:%M:%S")
                     cursor.execute("SELECT * FROM new_app_name WHERE old_name = ?", (app_name,))
                     row = cursor.fetchone()
                     if row:
-                        cursor.execute("UPDATE new_app_name SET new_name = ?, date = ? WHERE old_name = ?", (new_name, str(date.today()), app_name))
+                        cursor.execute("UPDATE new_app_name SET new_name = ?, date = ?, timestamp = ? WHERE old_name = ?", (new_name, str(date.today()), current_time, app_name))
                     else:
-                        cursor.execute("INSERT INTO new_app_name (old_name, new_name, date) VALUES (?, ?, ?)", (app_name, new_name, str(date.today())))
+                        cursor.execute("INSERT INTO new_app_name (old_name, new_name, date, timestamp) VALUES (?, ?, ?, ?)", (app_name, new_name, str(date.today()), current_time))
                 else:
                     appname_dict.pop(app_name, None)
                     cursor.execute("DELETE FROM new_app_name WHERE old_name = ? ", (app_name,))
@@ -1044,7 +1040,8 @@ def setup_sql():
                 app_name TEXT NOT NULL,
                 time INTEGER NOT NULL,
                 maximum INTEGER NOT NULL,
-                score_earn INTEGER NOT NULL
+                score_earn INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
             );
         ''')
         
@@ -1070,17 +1067,19 @@ def setup_sql():
                     id INTEGER PRIMARY KEY,
                     old_name TEXT NOT NULL,
                     new_name TEXT,
-                    date TEXT NOT NULL --Store as YYYY-MM-DD
+                    date TEXT NOT NULL,
+                    timestamp TEXT NOT NULL
             );
         ''')
 
         cursor.execute('''
                 CREATE TABLE IF NOT EXISTS failed_quests(
                     id INTEGER PRIMARY KEY,
-                    date TEXT NOT NULL, --Store as YYYY-MM-DD
+                    date TEXT NOT NULL,
                     app_name TEXT NOT NULL,
                     time INTEGER NOT NULL,
-                    score_deduct INTEGER NOT NULL
+                    score_deduct INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL
             );
         ''')
         
@@ -1325,8 +1324,9 @@ def check_quest(app_name):
                         quest = cursor.fetchone()
                         quest_time = quest[0]
                         maximum = quest[1]
+                        current_time = datetime.now().strftime("%H:%M:%S")
                         
-                        cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
+                        cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn, timestamp) VALUES (?, ?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score, current_time))
                         conn.commit()
                     except sqlite3.Error as e:
                         if DEBUG: print(f"An error occurred: {e}")
@@ -1350,9 +1350,10 @@ def check_quest(app_name):
                     try:
                         cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
                         quest_time = cursor.fetchone()[0]
+                        current_time = datetime.now().strftime("%H:%M:%S")
                     
                         cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
-                        cursor.execute("INSERT INTO failed_quests (date, app_name, time, score_deduct) VALUES (?, ?, ?, ?)", (str(date.today()), app_name, quest_time, task_score))
+                        cursor.execute("INSERT INTO failed_quests (date, app_name, time, score_deduct, timestamp) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, task_score, current_time))
                         conn.commit()
                     except sqlite3.Error as e:
                         if DEBUG: print(f"An error occurred: {e}")
@@ -1380,8 +1381,9 @@ def check_quest(app_name):
                 quest = cursor.fetchone()
                 quest_time = quest[0]
                 maximum = quest[1]
+                current_time = datetime.now().strftime("%H:%M:%S")
                 
-                cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
+                cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn, timestamp) VALUES (?, ?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score, current_time))
                 conn.commit()
             except sqlite3.Error as e:
                 if DEBUG: print(f"An error occurred: {e}")
@@ -1414,9 +1416,10 @@ def update_log(today):
             for quest in quests:
                 quest_time = quest[0]
                 app_name = quest[1]
+                current_time = datetime.now().strftime("%H:%M:%S")
                 
                 if (app_name in quest_list) and (app_name not in failed_list):
-                    cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, 0, ?)", (today, app_name, quest_time, task_score))
+                    cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn, timestamp) VALUES (?, ?, ?, 0, ?, ?)", (today, app_name, quest_time, task_score, current_time))
                 elif (app_name in failed_list):
                     cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app, today))
 
@@ -1485,6 +1488,9 @@ detected_app = []
 appname_label_dict = {}
 apptime_label_dict = {}
 appquest_label_dict = {}
+
+# Activity Log Tab UI
+activity_log_dict = {}
 
 google = "Google Chrome"
 
