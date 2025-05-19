@@ -326,31 +326,31 @@ class Tabview(ctk.CTkTabview):
                             app_name = app
                             custom_name = 'Custom Name'
                         
-                        self.quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=100)
-                        self.quest_box.pack(pady=5)
-                        self.quest_box.grid_columnconfigure((0), weight=1)
-                        self.quest_box.grid_propagate(False)
+                        quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=100)
+                        quest_box.pack(pady=5)
+                        quest_box.grid_columnconfigure((0), weight=1)
+                        quest_box.grid_propagate(False)
                         
                         #Quest Name
-                        self.quest_name_label = ctk.CTkLabel(self.quest_box, text=f'{app_name}')
-                        self.quest_name_label.grid(row=0, column=0, sticky="w", padx=30, pady=10)
+                        quest_name_label = ctk.CTkLabel(quest_box, text=f'{app_name}')
+                        quest_name_label.grid(row=0, column=0, sticky="w", padx=30, pady=10)
                         
                         #Quest Time
-                        self.quest_time_dropdown = ctk.CTkComboBox(self.quest_box, values=time_list)
-                        self.quest_time_dropdown.set(f"{maximum}{time // 60} hour(s)")
-                        self.quest_time_dropdown.grid(row=0, column=2, sticky="e", padx=30, pady=10)
+                        quest_time_dropdown = ctk.CTkComboBox(quest_box, values=time_list)
+                        quest_time_dropdown.set(f"{maximum}{time // 60} hour(s)")
+                        quest_time_dropdown.grid(row=0, column=2, sticky="e", padx=30, pady=10)
                         
                         #Change Name 
-                        self.entry = ctk.CTkEntry(self.quest_box, placeholder_text=custom_name)
-                        self.entry.grid(row=1, column=0, padx=30, pady=5, sticky="w")
+                        entry = ctk.CTkEntry(quest_box, placeholder_text=custom_name)
+                        entry.grid(row=1, column=0, padx=30, pady=5, sticky="w")
             
                         #Delete Button
-                        self.delete_button = ctk.CTkButton(self.quest_box, text="Delete", command=lambda current_app=app: self.delete_quest(current_app))
-                        self.delete_button.grid(row=1, column=1, padx=(0, 5), pady=10, sticky="e")
+                        delete_button = ctk.CTkButton(quest_box, text="Delete", command=lambda current_app=app: self.delete_quest(current_app))
+                        delete_button.grid(row=1, column=1, padx=(0, 5), pady=10, sticky="e")
 
                         #Update Button
-                        self.save_button = ctk.CTkButton(self.quest_box, text="Update", command=lambda dropdown=self.quest_time_dropdown, current_app=app, new_name_widget=self.entry: self.update_quest_frame(dropdown, current_app, new_name_widget))
-                        self.save_button.grid(row=1, column=2, padx=(5, 30), pady=10, sticky='e')
+                        save_button = ctk.CTkButton(quest_box, text="Update", command=lambda dropdown=quest_time_dropdown, current_app=app, new_name_widget=entry: self.update_quest_frame(dropdown, current_app, new_name_widget))
+                        save_button.grid(row=1, column=2, padx=(5, 30), pady=10, sticky='e')
                         
                         quest_list.append(app)
                         quest_dict[app] = {"maximum": maximum, "time": time * 60}
