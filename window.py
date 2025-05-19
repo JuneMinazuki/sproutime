@@ -770,7 +770,7 @@ class Tabview(ctk.CTkTabview):
     def save_quest_time(self):
         global temp_quest_app, temp_quest_tab, temp_quest_time, quest_list_update
         max_map = {'>': 1, '<': 0}
-        time_map = {'1 hour': 60, '2 hours': 120, '3 hours': 180}
+        time_map = {'1 hour(s)': 60, '2 hour(s)': 120, '3 hour(s)': 180}
         maximum = max_map.get(temp_quest_time[0])
         minutes = time_map.get(temp_quest_time[1:])
         name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
