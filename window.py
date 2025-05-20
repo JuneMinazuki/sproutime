@@ -148,7 +148,7 @@ class Tabview(ctk.CTkTabview):
         self.activity_day = ctk.CTkEntry(self.activity_nav_frame, placeholder_text="Day")
         self.activity_day.grid(row=1, column=2, sticky="w", pady=(0,30), padx=(0,15))
 
-        self.activity_search = ctk.CTkButton(self.activity_nav_frame, text="Search")
+        self.activity_search = ctk.CTkButton(self.activity_nav_frame, text="Search", command=self.search_date)
         self.activity_search.grid(row=1, column=3, padx=20, sticky="w", pady=(0,30))
         
         for col in range(1):
@@ -771,6 +771,22 @@ class Tabview(ctk.CTkTabview):
             debug_menu = DebugMenu(self)  # Pass the main window as parent
         else:
             debug_menu.focus()
+
+    def search_date(self):
+        global date_request
+        print(date_request)
+        year = self.activity_year.get()
+        month = self.activity_month.get()
+        day = self.activity_day.get()
+
+        try:
+            date_request = f"{year}-{month}-{day}"
+            date_request  = f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
+            datetime.strptime(date_request, "%Y-%m-%d")
+        except ValueError:
+            date_request = str(date.today())
+
+
         
 class DrawPieChart(ctk.CTkFrame):
     def __init__(self, master, data, **kwargs):
@@ -1477,6 +1493,9 @@ detected_app = []
 appname_label_dict = {}
 apptime_label_dict = {}
 appquest_label_dict = {}
+
+# Activity Log Tab UI
+date_request = str(date.today())
 
 google = "Google Chrome"
 
