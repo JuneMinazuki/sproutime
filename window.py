@@ -1403,7 +1403,7 @@ def on_closing(): #when user close the program
     sys.exit()
 
 #DEBUG
-DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
+DEBUG = 1
 
 setup_sql()
 
@@ -1415,7 +1415,7 @@ time_lock = threading.Lock()
 
 ##Global Var
 appName = ""
-update_tick = 1 if DEBUG else 60
+update_tick = 1
 app_dict = {}
 temp_quest_app = ""
 temp_quest_tab = ""
