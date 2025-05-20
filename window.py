@@ -402,7 +402,7 @@ class Tabview(ctk.CTkTabview):
             sleep(update_tick)
             
     def update_score(self):
-        global running, quest_complete_update, update_tick, old_name_list
+        global running, quest_complete_update, update_tick, old_name_list, date_request
         
         while running:
             if quest_complete_update:
@@ -411,7 +411,7 @@ class Tabview(ctk.CTkTabview):
                 cursor = conn.cursor()
                 
                 try:
-                    cursor.execute("SELECT app_name, time, maximum, score_earn, timestamp FROM quest_completion")
+                    cursor.execute("SELECT app_name, time, maximum, score_earn, timestamp FROM quest_completion WHERE date = ?", (date_request,))
                     quests = cursor.fetchall()
                     
                     self.completed_list_TB.delete("0.0", "end")
@@ -424,7 +424,7 @@ class Tabview(ctk.CTkTabview):
                             activity_log_dict[quest[4]] = f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points'
                 
                     # Failed Quest Textbox Update
-                    cursor.execute("SELECT app_name, time, score_deduct, timestamp FROM failed_quests")
+                    cursor.execute("SELECT app_name, time, score_deduct, timestamp FROM failed_quests WHERE date = ?", (date_request,))
                     failed_quests = cursor.fetchall()
 
                     for quest in failed_quests:
@@ -434,7 +434,7 @@ class Tabview(ctk.CTkTabview):
                             activity_log_dict[quest[3]] = f'{quest[0]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points'
 
                     # App Name Change Log
-                    cursor.execute("SELECT old_name, new_name, timestamp FROM new_app_name")
+                    cursor.execute("SELECT old_name, new_name, timestamp FROM new_app_name WHERE date = ?", (date_request,))
                     names = cursor.fetchall()
 
                     for name in names:
@@ -771,7 +771,6 @@ class Tabview(ctk.CTkTabview):
 
     def search_date(self):
         global date_request
-        print(date_request)
         year = self.activity_year.get()
         month = self.activity_month.get()
         day = self.activity_day.get()
@@ -783,8 +782,6 @@ class Tabview(ctk.CTkTabview):
         except ValueError:
             date_request = str(date.today())
 
-
-        
 class DrawPieChart(ctk.CTkFrame):
     def __init__(self, master, data, **kwargs):
         super().__init__(master, **kwargs)
