@@ -311,7 +311,7 @@ class Tabview(ctk.CTkTabview):
                         else:
                             quest_info = "No quest set"
                     except sqlite3.Error as e:
-                        if DEBUG: print(f"An error occurred: {e}")
+                        if DEBUG: print(f"An SQL error occurred: {e}")
                         conn.rollback()
                     finally:
                         if conn:
@@ -398,9 +398,6 @@ class Tabview(ctk.CTkTabview):
                     cursor.execute("SELECT app_name, maximum, time FROM quest")
                     quests = cursor.fetchall()
                     
-                    quest_dict.clear()
-                    quest_list.clear()
-                    
                     for widget in self.quest_list_frame.winfo_children():
                         widget.pack_forget()
             
@@ -451,11 +448,8 @@ class Tabview(ctk.CTkTabview):
                         #Update Button
                         save_button = ctk.CTkButton(quest_box, text="Update", command=lambda max_switch=maximum_switch, time_slider=time_slider, current_app=app, new_name_widget=entry: self.update_quest_frame(max_switch, time_slider, current_app, new_name_widget))
                         save_button.grid(row=2, column=2, padx=(5, 30), pady=10, sticky='e')
-                        
-                        quest_list.append(app)
-                        quest_dict[app] = {"maximum": maximum, "time": time * 60}
                 except sqlite3.Error as e:
-                    if DEBUG: print(f"An error occurred: {e}")
+                    if DEBUG: print(f"An SQL error occurred: {e}")
                     conn.rollback()
                 finally:
                     if conn:
@@ -505,7 +499,7 @@ class Tabview(ctk.CTkTabview):
                         self.namechange_list_TB.insert("end", f""" "{name[0]}" was changed into "{name[1]}"\n""")
 
                 except sqlite3.Error as e:
-                    if DEBUG: print(f"An error occurred: {e}")
+                    if DEBUG: print(f"An SQL error occurred: {e}")
                     conn.rollback()
                 finally:
                     if conn:
@@ -608,7 +602,7 @@ class Tabview(ctk.CTkTabview):
                     self.streak_label.configure(text=f'{day_left} more day(s) to go!')
                     
                 except sqlite3.Error as e:
-                    if DEBUG: print(f"An error occurred: {e}")
+                    if DEBUG: print(f"An SQL error occurred: {e}")
                     conn.rollback()
                 finally:
                     if conn:
@@ -719,7 +713,7 @@ class Tabview(ctk.CTkTabview):
             cursor.execute("DELETE FROM quest WHERE app_name = ?", (app_name,))
             conn.commit()
         except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
+            if DEBUG: print(f"An SQL error occurred: {e}")
             conn.rollback()
         finally:
             if conn:
@@ -743,13 +737,13 @@ class Tabview(ctk.CTkTabview):
         
         try:
             cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (minutes, maximum, app_name))
+            cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
+            cursor.execute("DELETE FROM failed_quests WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
             
             if app_name in completed_list:
                 completed_list.remove(app_name)
-                cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
             if app_name in failed_list:
                 failed_list.remove(app_name)
-                cursor.execute("DELETE FROM failed_quest WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
              
             #New Name   
             if new_name:
@@ -768,7 +762,7 @@ class Tabview(ctk.CTkTabview):
                     
             conn.commit()
         except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
+            if DEBUG: print(f"An SQL error occurred: {e}")
             conn.rollback()
         finally:
             if conn:
@@ -791,8 +785,11 @@ class Tabview(ctk.CTkTabview):
         try:
             cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (name, minutes, maximum))
             conn.commit()
+            
+            quest_list.append(name)
+            quest_dict[app] = {"maximum": maximum, "time": minutes * 60}
         except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
+            if DEBUG: print(f"An SQL error occurred: {e}")
             conn.rollback()
         finally:
             if conn:
@@ -976,7 +973,7 @@ class DebugMenu(ctk.CTkToplevel):
             table_names = [table[0] for table in tables]
             table_var = ctk.StringVar(value=table_names[0])
         except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
+            if DEBUG: print(f"An SQL error occurred: {e}")
             conn.rollback()
         finally:
             if conn:
@@ -985,11 +982,13 @@ class DebugMenu(ctk.CTkToplevel):
         self.table_dropdown = ctk.CTkComboBox(self, values=table_names, variable=table_var)
         self.table_dropdown.grid(row=1, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
         
-        self.clear_data_button = ctk.CTkButton(master=self, text="Clear Data", command=lambda table=table_var.get(): self.clear_data(table))
+        self.clear_data_button = ctk.CTkButton(master=self, text="Clear Data",
+                                               command=lambda title=f'Clear Data?', on_yes=lambda table=table_var: self.clear_data(table), : show_confirmation(title=title, on_yes=on_yes))
         self.clear_data_button.grid(row=2, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
         
         #Drop every table
-        self.drop_table_button = ctk.CTkButton(master=self, text="Reset Database", command=self.reset_database)
+        self.drop_table_button = ctk.CTkButton(master=self, text="Reset Database",
+                                               command=lambda title='Drop All Table?', on_yes=lambda: self.reset_database(), : show_confirmation(title=title, on_yes=on_yes))
         self.drop_table_button.grid(row=3, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
     def clear_data(self, table):
@@ -999,10 +998,10 @@ class DebugMenu(ctk.CTkToplevel):
         cursor = conn.cursor()
         
         try:
-            cursor.execute(f"DELETE FROM {table}")
+            cursor.execute(f"DELETE FROM {table.get()}")
             conn.commit()
         except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
+            if DEBUG: print(f"An SQL error occurred: {e}")
             conn.rollback()
         finally:
             if conn:
@@ -1029,7 +1028,7 @@ class DebugMenu(ctk.CTkToplevel):
                     if DEBUG: print(f"Error dropping table {table_name}: {e}")
             conn.commit()
         except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
+            if DEBUG: print(f"An SQL error occurred: {e}")
             conn.rollback()
         finally:
             if conn:
@@ -1114,7 +1113,7 @@ def setup_sql():
         ''')
         
     except sqlite3.Error as e:
-        if DEBUG: print(f"An error occurred: {e}")
+        if DEBUG: print(f"An SQL error occurred: {e}")
         conn.rollback()
     finally:
         if conn:
@@ -1304,7 +1303,7 @@ def load_past_data():
 
 
     except sqlite3.Error as e:
-        if DEBUG: print(f"An error occurred: {e}")
+        if DEBUG: print(f"An SQL error occurred: {e}")
         conn.rollback()
     finally:
         if conn:
@@ -1358,7 +1357,7 @@ def check_quest(app_name):
                         cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
                         conn.commit()
                     except sqlite3.Error as e:
-                        if DEBUG: print(f"An error occurred: {e}")
+                        if DEBUG: print(f"An SQL error occurred: {e}")
                         conn.rollback()
                     finally:
                         if conn:
@@ -1384,7 +1383,7 @@ def check_quest(app_name):
                         cursor.execute("INSERT INTO failed_quests (date, app_name, time, score_deduct) VALUES (?, ?, ?, ?)", (str(date.today()), app_name, quest_time, task_score))
                         conn.commit()
                     except sqlite3.Error as e:
-                        if DEBUG: print(f"An error occurred: {e}")
+                        if DEBUG: print(f"An SQL error occurred: {e}")
                         conn.rollback()
                     finally:
                         if conn:
@@ -1409,11 +1408,12 @@ def check_quest(app_name):
                 quest = cursor.fetchone()
                 quest_time = quest[0]
                 maximum = quest[1]
+                completed_list.append(app_name)
                 
                 cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
                 conn.commit()
             except sqlite3.Error as e:
-                if DEBUG: print(f"An error occurred: {e}")
+                if DEBUG: print(f"An SQL error occurred: {e}")
                 conn.rollback()
             finally:
                 if conn:
@@ -1465,11 +1465,41 @@ def update_log(today):
         completed_list = []
         failed_list = []
     except sqlite3.Error as e:
-        if DEBUG: print(f"An error occurred: {e}")
+        if DEBUG: print(f"An SQL error occurred: {e}")
         conn.rollback()
     finally:
         if conn:
             conn.close()
+            
+def show_confirmation(title='Are you sure?', message='Warning: This action cannot be undone', on_yes=None, on_no=None):
+    dialog = ctk.CTkToplevel()
+    dialog.title(title)
+    dialog.geometry("360x140")
+    dialog.attributes('-topmost', True)
+    dialog.grab_set()
+
+    # Create a label to display the message
+    message_label = ctk.CTkLabel(dialog, text=message)
+    message_label.grid(row=0, column=0, pady=(20,10), padx=20, columnspan=2, sticky='ew')
+
+    def yes_callback():
+        dialog.destroy()
+        if on_yes:
+            on_yes() # Call the 'Yes' callback
+
+    def no_callback():
+        dialog.destroy()
+        if on_no:
+            on_no()  # Call the 'No' callback
+
+    # Add buttons to the dialog.
+    yes_button = ctk.CTkButton(dialog, text="Yes", command=yes_callback)
+    yes_button.grid(row=1, column=0, pady=20, padx=20, sticky='w')
+    no_button = ctk.CTkButton(dialog, text="No", command=no_callback)
+    no_button.grid(row=1, column=1, pady=20, padx=20, sticky='e')
+
+    # The dialog will block until a button is pressed.
+    dialog.wait_window()
 
 def on_closing(): #when user close the program
     global running
