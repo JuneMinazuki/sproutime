@@ -1263,11 +1263,11 @@ def check_quest(app_name):
     global quest_complete_update, app_dict, quest_list, quest_dict, total_points
     
     if (quest_list) and (app_name in quest_list):
+        task_score = determine_score()
+        
         if app_name in app_dict:
             if quest_dict[app_name]["time"] <= app_dict[app_name]:
                 if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
-                    task_score = determine_score()
-                    
                     conn = sqlite3.connect('sproutime.db')
                     cursor = conn.cursor()
                     
@@ -1348,6 +1348,7 @@ def determine_score():
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
+    current_streak = 0
     try:
         cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(date.today()),))
         days = cursor.fetchall()
@@ -1381,6 +1382,8 @@ def update_log(today):
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
+    task_score = determine_score()
+    
     try:
         #App Time
         for app in app_dict:
@@ -1392,8 +1395,6 @@ def update_log(today):
         
         #Quest Completed For "<" Quest
         if (quest_list):
-            task_score = determine_score()
-
             cursor.execute("SELECT time, app_name FROM quest WHERE maximum = 0")
             quests = cursor.fetchall()
             
