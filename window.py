@@ -887,34 +887,40 @@ class DebugMenu(ctk.CTkToplevel):
                                                     onvalue=3600, offvalue=1, width=10)
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
         
-        #Clear quest
-        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Quest", command=self.clear_quest)
-        self.drop_table_button.grid(row=1, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        #Clear data
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
         
-        #Clear quest_completion
-        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Completed", command=self.clear_completed)
-        self.drop_table_button.grid(row=2, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        try:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = cursor.fetchall()
+            table_names = [table[0] for table in tables]
+            table_var = ctk.StringVar(value=table_names[0])
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        self.table_dropdown = ctk.CTkComboBox(self, values=table_names, variable=table_var)
+        self.table_dropdown.grid(row=1, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
         
-        #Clear app_time
-        self.drop_table_button = ctk.CTkButton(master=self, text="Clear App Time", command=self.clear_app)
-        self.drop_table_button.grid(row=3, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
-        
-        #Clear streak
-        self.drop_table_button = ctk.CTkButton(master=self, text="Clear Streak", command=self.clear_quest_streak)
-        self.drop_table_button.grid(row=4, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        self.clear_data_button = ctk.CTkButton(master=self, text="Clear Data", command=lambda table=table_var.get(): self.clear_data(table))
+        self.clear_data_button.grid(row=2, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
         
         #Drop every table
         self.drop_table_button = ctk.CTkButton(master=self, text="Reset Database", command=self.reset_database)
-        self.drop_table_button.grid(row=5, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        self.drop_table_button.grid(row=3, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
-    def clear_quest(self):
+    def clear_data(self, table):
         global quest_list_update
         
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
         
         try:
-            cursor.execute("DELETE FROM quest")
+            cursor.execute(f"DELETE FROM {table}")
             conn.commit()
         except sqlite3.Error as e:
             if DEBUG: print(f"An error occurred: {e}")
@@ -924,57 +930,6 @@ class DebugMenu(ctk.CTkToplevel):
                 conn.close()
         
         quest_list_update = True
-    
-    def clear_completed(self):
-        global quest_complete_update
-        
-        conn = sqlite3.connect('sproutime.db')
-        cursor = conn.cursor()
-        
-        try:
-            cursor.execute("DELETE FROM quest_completion")
-            conn.commit()
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
-            conn.rollback()
-        finally:
-            if conn:
-                conn.close()
-        
-        quest_complete_update = True
-    
-    def clear_app(self):
-        global app_time_update, app_dict
-        
-        conn = sqlite3.connect('sproutime.db')
-        cursor = conn.cursor()
-        
-        try:
-            cursor.execute("DELETE FROM app_time")
-            conn.commit()
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
-            conn.rollback()
-        finally:
-            if conn:
-                conn.close()
-        
-        app_dict = {}
-        app_time_update = True
-        
-    def clear_quest_streak(self):    
-        conn = sqlite3.connect('sproutime.db')
-        cursor = conn.cursor()
-        
-        try:
-            cursor.execute("DELETE FROM quest")
-            conn.commit()
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
-            conn.rollback()
-        finally:
-            if conn:
-                conn.close()
             
     def reset_database(self):
         global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, total_points, appname_dict, old_name_list
@@ -1448,7 +1403,7 @@ def on_closing(): #when user close the program
     sys.exit()
 
 #DEBUG
-DEBUG = 1 #Use this to lower the time check for app from minute to second to save time
+DEBUG = 1
 
 setup_sql()
 
@@ -1460,7 +1415,7 @@ time_lock = threading.Lock()
 
 ##Global Var
 appName = ""
-update_tick = 1 if DEBUG else 60
+update_tick = 1
 app_dict = {}
 temp_quest_app = ""
 temp_quest_tab = ""
