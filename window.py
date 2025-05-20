@@ -126,10 +126,31 @@ class Tabview(ctk.CTkTabview):
     def create_score_widgets(self):
         self.score_tab = self.add("Score")
 
-        #Completed Quests Textbox
-        self.completed_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
-        self.completed_list_TB.grid(row=0, column=0, columnspan=3)
+        # Pending for removal
+        self.completed_list_TB = ctk.CTkTextbox(self.score_tab)
 
+        self.activity_nav_frame = ctk.CTkFrame(self.score_tab, width=900, height=100)
+        self.activity_nav_frame.grid(row=0)
+        self.activity_nav_frame.grid_propagate(False)
+
+        self.activitytab_scrollable = ctk.CTkScrollableFrame(self.score_tab, width=900, height=500)
+        self.activitytab_scrollable.grid(row=1)
+
+        self.activity_day_title = ctk.CTkLabel(self.activity_nav_frame, text="Today", font=(None, 15, "bold"))
+        self.activity_day_title.grid(row=0, column=0, sticky="w", pady=(0,10))
+
+        self.activity_year = ctk.CTkEntry(self.activity_nav_frame, placeholder_text="Year")
+        self.activity_year.grid(row=1, column=0, sticky="w", pady=(0,30), padx=(0,15))
+
+        self.activity_month = ctk.CTkEntry(self.activity_nav_frame, placeholder_text="Month")
+        self.activity_month.grid(row=1, column=1, sticky="w", pady=(0,30), padx=(0,15))
+
+        self.activity_day = ctk.CTkEntry(self.activity_nav_frame, placeholder_text="Day")
+        self.activity_day.grid(row=1, column=2, sticky="w", pady=(0,30), padx=(0,15))
+
+        self.activity_search = ctk.CTkButton(self.activity_nav_frame, text="Search")
+        self.activity_search.grid(row=1, column=3, padx=20, sticky="w", pady=(0,30))
+        
         for col in range(1):
             self.score_tab.columnconfigure(col, weight=1)
         
@@ -262,7 +283,7 @@ class Tabview(ctk.CTkTabview):
                     if app not in detected_app:
                                 
                         #Frame for each app
-                        self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=1080, height=150, fg_color="#515151", border_color="red")
+                        self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=1080, height=150, fg_color="#515151")
                         self.progress_app_frame.pack(padx=10, pady=10)
                         self.progress_app_frame.grid_propagate(False)
 
@@ -387,10 +408,11 @@ class Tabview(ctk.CTkTabview):
             sleep(update_tick)
             
     def update_score(self):
-        global running, quest_complete_update, update_tick, old_name_list, activity_log_dict
+        global running, quest_complete_update, update_tick, old_name_list
         
         while running:
             if quest_complete_update:
+                activity_log_dict = {}
                 conn = sqlite3.connect('sproutime.db')
                 cursor = conn.cursor()
                 
@@ -402,7 +424,7 @@ class Tabview(ctk.CTkTabview):
                     for quest in quests:
                         maximum = ">" if quest[2] == 1 else "<"
                         
-                        if appname_dict and quest[0] in old_name_list:
+                        if appname_dict and (quest[0] in old_name_list):
                             activity_log_dict[quest[4]] = f'{appname_dict[quest[0]]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points'
                         else:
                             activity_log_dict[quest[4]] = f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points'
@@ -412,7 +434,7 @@ class Tabview(ctk.CTkTabview):
                     failed_quests = cursor.fetchall()
 
                     for quest in failed_quests:
-                        if appname_dict and quest[0] in old_name_list:
+                        if appname_dict and (quest[0] in old_name_list):
                             activity_log_dict[quest[3]] = f'{appname_dict[quest[0]]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points'
                         else:
                             activity_log_dict[quest[3]] = f'{quest[0]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points'
@@ -430,11 +452,23 @@ class Tabview(ctk.CTkTabview):
                 finally:
                     if conn:
                         conn.close()
-                
+                print(activity_log_dict)
+
+                for widget in self.activitytab_scrollable.winfo_children():
+                    widget.destroy()
+
                 sorted_activity_log_dict = dict(sorted(activity_log_dict.items(), key=lambda x: datetime.strptime(x[0], "%H:%M:%S").time()))
                 for time, info in sorted_activity_log_dict.items():
-                    self.completed_list_TB.insert("end", f"{time} -->> {info}\n")
+                    print(sorted_activity_log_dict)
+                    self.activity_frame = ctk.CTkFrame(self.activitytab_scrollable, width=700, height=40, fg_color="#515151")
+                    self.activity_frame.grid(pady=3, sticky="w")
+                    self.activity_frame.grid_propagate(False)
 
+                    self.activity_time = ctk.CTkLabel(self.activity_frame, text=time, font=(None, 15, "bold"))
+                    self.activity_time.place(x=10, rely=0.5, anchor="w")
+
+                    self.activity_info = ctk.CTkLabel(self.activity_frame, text=info)
+                    self.activity_info.place(x=100, rely=0.5, anchor="w")
 
                 quest_complete_update = False
             sleep(update_tick)
@@ -1443,9 +1477,6 @@ detected_app = []
 appname_label_dict = {}
 apptime_label_dict = {}
 appquest_label_dict = {}
-
-# Activity Log Tab UI
-activity_log_dict = {}
 
 google = "Google Chrome"
 
