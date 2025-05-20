@@ -234,23 +234,24 @@ class Tabview(ctk.CTkTabview):
         # show treepoint in label
         self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: {point}")
         self.treeview_label.pack(pady=10)
-        # update image with your own image path if point > 100
-        if point > 100:
-            self.display_image(self.treeview_tab, "your_image1.png")
-        else:
-            self.display_image(self.treeview_tab, "your_image2.png")
-
+        
     def display_image(self, parent, image_path):
         try:
             img = Image.open(image_path)
-            img = img.resize((300, 200), Image.ANTIALIAS)
-            photo = ImageTk.PhotoImage(img)
+            img = img.resize((300, 200), Image.Resampling.LANCZOS)
+            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(300, 200))
             label = ctk.CTkLabel(parent, image=photo, text="")
             label.image = photo  # Keep a reference!
             label.pack(pady=20)
         except Exception as e:
             label = ctk.CTkLabel(parent, text=f"Error loading image:\n{e}")
             label.pack(pady=20)
+        
+        # only show one image only
+        for widget in parent.winfo_children():
+            if isinstance(widget, ctk.CTkLabel) and widget != label:
+                widget.destroy()
+                
 
     def update_treeview(self):
         # update treeview with point
@@ -288,6 +289,13 @@ class Tabview(ctk.CTkTabview):
         
         # update label with point
         self.treeview_label.configure(text=f"Point: {point}")
+
+        # update image with your own image path if point >=100
+        if point >= 100:
+            self.display_image(self.treeview_tab, "your_image1.jpg")
+        else:
+            self.display_image(self.treeview_tab, "your_image2.jpg")
+            
         
 
     def update_progress(self):
