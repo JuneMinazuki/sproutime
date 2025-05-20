@@ -658,13 +658,13 @@ class Tabview(ctk.CTkTabview):
         
         try:
             cursor.execute("UPDATE quest SET time = ?, maximum = ? WHERE app_name = ?", (minutes, maximum, app_name))
+            cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
+            cursor.execute("DELETE FROM failed_quests WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
             
             if app_name in completed_list:
                 completed_list.remove(app_name)
-                cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
             if app_name in failed_list:
                 failed_list.remove(app_name)
-                cursor.execute("DELETE FROM failed_quest WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
              
             #New Name   
             if new_name:
@@ -1329,6 +1329,7 @@ def check_quest(app_name):
                 quest = cursor.fetchone()
                 quest_time = quest[0]
                 maximum = quest[1]
+                completed_list.append(app_name)
                 
                 cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
                 conn.commit()
