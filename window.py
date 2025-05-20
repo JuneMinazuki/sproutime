@@ -1260,12 +1260,14 @@ def update_time():
             sleep(1)
 
 def check_quest(app_name):
-    global quest_complete_update, app_dict, quest_list, quest_dict, total_points, task_score
+    global quest_complete_update, app_dict, quest_list, quest_dict, total_points
     
     if (quest_list) and (app_name in quest_list):
         if app_name in app_dict:
             if quest_dict[app_name]["time"] <= app_dict[app_name]:
                 if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
+                    task_score = determine_score()
+                    
                     conn = sqlite3.connect('sproutime.db')
                     cursor = conn.cursor()
                     
@@ -1341,9 +1343,41 @@ def check_quest(app_name):
                     conn.close()
                 
             completed_list.append(app_name)
+
+def determine_score():
+    conn = sqlite3.connect('sproutime.db')
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(date.today()),))
+        days = cursor.fetchall()
+        
+        for day in days:
+            if day[1] == day[2]:
+                current_streak += 1
+            else:
+                break
+    except sqlite3.Error as e:
+        if DEBUG: print(f"An SQL error occurred: {e}")
+        conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+    
+    #Total Task
+    if len(quest_list) > 5:
+        score = 500 // len(quest_list)
+    else:
+        score = 100
+    
+    #Streak Multiplier
+    multiplier = 1 + ((current_streak // 7) + 1) * 0.1
+    score = score * multiplier
+
+    return score
     
 def update_log(today):
-    global app_dict, completed_list, quest_list, failed_list, task_score
+    global app_dict, completed_list, quest_list, failed_list
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
@@ -1358,6 +1392,8 @@ def update_log(today):
         
         #Quest Completed For "<" Quest
         if (quest_list):
+            task_score = determine_score()
+
             cursor.execute("SELECT time, app_name FROM quest WHERE maximum = 0")
             quests = cursor.fetchall()
             
@@ -1455,7 +1491,6 @@ quest_dict = {}
 completed_list = []
 failed_list = []
 total_points = 0    # Right now +100 per completed quest
-task_score = 100
 slider_var = ctk.IntVar(value=1)
 switch_var = ctk.StringVar(value=">")
 
