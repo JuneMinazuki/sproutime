@@ -1,4 +1,5 @@
 import sys
+import math
 
 #Check OS and popup for missing libraries
 try:
@@ -38,9 +39,8 @@ class Tabview(ctk.CTkTabview):
             
         self.progress_thread = None
         self.quest_thread = None
-        self.score_thread = None
+        self.activity_thread = None
         self.stats_thread = None
-        self.bar_thread = None
 
         #Create widget
         self.create_progress_widgets()
@@ -125,22 +125,44 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
 
     def create_score_widgets(self):
-        self.score_tab = self.add("Score")
+        self.activity_tab = self.add("Activity")
 
-        #Completed Quests Textbox
-        self.completed_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
-        self.completed_list_TB.grid(row=0, column=0, columnspan=3)
+        # Pending for removal
+        self.completed_list_TB = ctk.CTkTextbox(self.activity_tab)
 
-        #Name Change Log
-        self.namechange_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
-        self.namechange_list_TB.grid(row=1, column=0, columnspan=3)
+        self.activity_nav_frame = ctk.CTkFrame(self.activity_tab, width=900, height=100)
+        self.activity_nav_frame.grid(row=0)
+        self.activity_nav_frame.grid_propagate(False)
 
-        #Failed Quests Textbox
-        self.failed_list_TB = ctk.CTkTextbox(self.score_tab, width=1080, height=180)
-        self.failed_list_TB.grid(row=2, column=0, columnspan=3)
+        self.date_error_prompt = ctk.CTkLabel(self.activity_nav_frame, text="Invalid date: Please insert a valid date (YYYY-MM-DD)", text_color="red")
 
+        self.activitytab_scrollable = ctk.CTkScrollableFrame(self.activity_tab, width=900, height=500)
+        self.activitytab_scrollable.grid(row=2)
+        bg_color = self.activitytab_scrollable.cget("fg_color")
+        self.activitytab_scrollable.configure(
+            scrollbar_fg_color=bg_color,
+            scrollbar_button_color=bg_color,
+            scrollbar_button_hover_color=bg_color
+        )
+
+
+        self.activity_day_title = ctk.CTkLabel(self.activity_nav_frame, text=f"Today: {str(date.today())}", font=(None, 15, "bold"))
+        self.activity_day_title.grid(row=0, column=0, sticky="w", pady=(0,10))
+
+        self.activity_year = ctk.CTkEntry(self.activity_nav_frame, placeholder_text="Year")
+        self.activity_year.grid(row=1, column=0, sticky="w", pady=(0,30), padx=(0,15))
+
+        self.activity_month = ctk.CTkEntry(self.activity_nav_frame, placeholder_text="Month")
+        self.activity_month.grid(row=1, column=1, sticky="w", pady=(0,30), padx=(0,15))
+
+        self.activity_day = ctk.CTkEntry(self.activity_nav_frame, placeholder_text="Day")
+        self.activity_day.grid(row=1, column=2, sticky="w", pady=(0,30), padx=(0,15))
+
+        self.activity_search = ctk.CTkButton(self.activity_nav_frame, text="Search", command=self.search_date)
+        self.activity_search.grid(row=1, column=3, padx=20, sticky="w", pady=(0,30))
+        
         for col in range(1):
-            self.score_tab.columnconfigure(col, weight=1)
+            self.activity_tab.columnconfigure(col, weight=1)
         
     def create_stats_widgets(self):
         self.stat_tab = self.add("Stats")
@@ -271,7 +293,7 @@ class Tabview(ctk.CTkTabview):
                     if app not in detected_app:
                                 
                         #Frame for each app
-                        self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=1080, height=150, fg_color="#515151", border_color="red")
+                        self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=1080, height=150, fg_color="#515151")
                         self.progress_app_frame.pack(padx=10, pady=10)
                         self.progress_app_frame.grid_propagate(False)
 
@@ -312,7 +334,7 @@ class Tabview(ctk.CTkTabview):
                     if app not in app_dict:
                         detected_app.clear()
                         for widget in self.progress_scrollable.winfo_children():
-                            widget.destroy()
+                            widget.pack_forget()
                     
                 app_time_update = False
             sleep(update_tick)
@@ -389,45 +411,44 @@ class Tabview(ctk.CTkTabview):
                 quest_list_update = False
             sleep(update_tick)
             
-    def update_score(self):
-        global running, quest_complete_update, update_tick, old_name_list
+    def update_activity(self):
+        global running, quest_complete_update, update_tick, old_name_list, date_request
         
         while running:
             if quest_complete_update:
+                activity_log_dict = {}
                 conn = sqlite3.connect('sproutime.db')
                 cursor = conn.cursor()
                 
                 try:
-                    cursor.execute("SELECT app_name, time, maximum, score_earn FROM quest_completion")
+                    cursor.execute("SELECT app_name, time, maximum, score_earn, timestamp FROM quest_completion WHERE date = ?", (date_request,))
                     quests = cursor.fetchall()
                     
                     self.completed_list_TB.delete("0.0", "end")
                     for quest in quests:
                         maximum = ">" if quest[2] == 1 else "<"
                         
-                        if appname_dict and quest[0] in old_name_list:
-                            self.completed_list_TB.insert("end", f'{appname_dict[quest[0]]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
+                        if appname_dict and (quest[0] in old_name_list):
+                            activity_log_dict[quest[4]] = f'{appname_dict[quest[0]]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points'
                         else:
-                            self.completed_list_TB.insert("end", f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points\n')
+                            activity_log_dict[quest[4]] = f'{quest[0]} {maximum} {int(quest[1]) / 60} hour(s): Completed +{quest[3]} points'
                 
                     # Failed Quest Textbox Update
-                    self.failed_list_TB.delete("0.0", "end")
-                    cursor.execute("SELECT app_name, time, score_deduct FROM failed_quests")
+                    cursor.execute("SELECT app_name, time, score_deduct, timestamp FROM failed_quests WHERE date = ?", (date_request,))
                     failed_quests = cursor.fetchall()
 
                     for quest in failed_quests:
-                        if appname_dict and quest[0] in old_name_list:
-                            self.failed_list_TB.insert("end", f'{appname_dict[quest[0]]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points\n')
+                        if appname_dict and (quest[0] in old_name_list):
+                            activity_log_dict[quest[3]] = f'{appname_dict[quest[0]]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points'
                         else:
-                            self.failed_list_TB.insert("end", f'{quest[0]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points\n')
+                            activity_log_dict[quest[3]] = f'{quest[0]} < {int(quest[1]) / 60} hour(s): Failed -{quest[2]} points'
 
                     # App Name Change Log
-                    cursor.execute("SELECT old_name, new_name FROM new_app_name")
+                    cursor.execute("SELECT old_name, new_name, timestamp FROM new_app_name WHERE date = ?", (date_request,))
                     names = cursor.fetchall()
 
-                    self.namechange_list_TB.delete("0.0", "end")
                     for name in names:
-                        self.namechange_list_TB.insert("end", f""" "{name[0]}" was changed into "{name[1]}"\n""")
+                        activity_log_dict[name[2]] = f'''"{name[0]}" was changed into "{name[1]}"'''
 
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An SQL error occurred: {e}")
@@ -436,11 +457,26 @@ class Tabview(ctk.CTkTabview):
                     if conn:
                         conn.close()
 
+                for widget in self.activitytab_scrollable.winfo_children():
+                    widget.grid_forget()
+
+                sorted_activity_log_dict = dict(sorted(activity_log_dict.items(), key=lambda x: datetime.strptime(x[0], "%H:%M:%S").time()))
+                for time, info in sorted_activity_log_dict.items():
+                    activity_frame = ctk.CTkFrame(self.activitytab_scrollable, width=700, height=40, fg_color="#515151")
+                    activity_frame.grid(pady=3, sticky="w")
+                    activity_frame.grid_propagate(False)
+
+                    activity_time = ctk.CTkLabel(activity_frame, text=time, font=(None, 15, "bold"))
+                    activity_time.place(x=10, rely=0.5, anchor="w")
+
+                    activity_info = ctk.CTkLabel(activity_frame, text=info)
+                    activity_info.place(x=100, rely=0.5, anchor="w")
+
                 quest_complete_update = False
             sleep(update_tick)
 
     def update_stats(self): 
-        global running, update_tick, stat_update
+        global running, update_tick, stat_update, appname_dict, old_name_list
                
         while running:
             if stat_update:
@@ -458,6 +494,8 @@ class Tabview(ctk.CTkTabview):
                     
                     time_dict = {}
                     for app_name, time in app_time:
+                        if appname_dict and (app_name in old_name_list):
+                            app_name = appname_dict[app_name]
                         if app_name in time_dict:
                             time_dict[app_name] += time
                         else:   
@@ -472,6 +510,8 @@ class Tabview(ctk.CTkTabview):
                     
                     time_dict = {}
                     for app_name, time in app_time:
+                        if appname_dict and (app_name in old_name_list):
+                            app_name = appname_dict[app_name]
                         if app_name in time_dict:
                             time_dict[app_name] += time
                         else:   
@@ -546,7 +586,7 @@ class Tabview(ctk.CTkTabview):
         tab = self.get()
         self.progress_active = tab == "Progress"
         self.quest_active = tab == "Quest"
-        self.score_active = tab == "Score"
+        self.activity_active = tab == "Activity"
         self.stats_active = tab == "Stats"
 
         #Progess Tab
@@ -566,10 +606,10 @@ class Tabview(ctk.CTkTabview):
             pass
         
         #Score Tab
-        if self.score_active and (self.score_thread is None or not self.score_thread.is_alive()):
-            self.score_thread = threading.Thread(target=self.update_score, daemon=True)
-            self.score_thread.start()
-        elif not self.score_active and self.score_thread and self.score_thread.is_alive():
+        if self.activity_active and (self.activity_thread is None or not self.activity_thread.is_alive()):
+            self.activity_thread = threading.Thread(target=self.update_activity, daemon=True)
+            self.activity_thread.start()
+        elif not self.activity_active and self.activity_thread and self.activity_thread.is_alive():
             # The thread will naturally pause in its while loop
             pass
         
@@ -672,12 +712,13 @@ class Tabview(ctk.CTkTabview):
                 if new_name != app_name:
                     appname_dict[app_name] = new_name
                     old_name_list.append(app_name)
+                    current_time = datetime.now().strftime("%H:%M:%S")
                     cursor.execute("SELECT * FROM new_app_name WHERE old_name = ?", (app_name,))
                     row = cursor.fetchone()
                     if row:
-                        cursor.execute("UPDATE new_app_name SET new_name = ? WHERE old_name = ?", (new_name, app_name))
+                        cursor.execute("UPDATE new_app_name SET new_name = ?, date = ?, timestamp = ? WHERE old_name = ?", (new_name, str(date.today()), current_time, app_name))
                     else:
-                        cursor.execute("INSERT INTO new_app_name (old_name, new_name) VALUES (?, ?)", (app_name, new_name))
+                        cursor.execute("INSERT INTO new_app_name (old_name, new_name, date, timestamp) VALUES (?, ?, ?, ?)", (app_name, new_name, str(date.today()), current_time))
                 else:
                     appname_dict.pop(app_name, None)
                     cursor.execute("DELETE FROM new_app_name WHERE old_name = ? ", (app_name,))
@@ -709,7 +750,7 @@ class Tabview(ctk.CTkTabview):
             conn.commit()
             
             quest_list.append(name)
-            quest_dict[app] = {"maximum": maximum, "time": minutes * 60}
+            quest_dict[name] = {"maximum": switch_var.get(), "time": minutes * 60}
         except sqlite3.Error as e:
             if DEBUG: print(f"An SQL error occurred: {e}")
             conn.rollback()
@@ -735,7 +776,33 @@ class Tabview(ctk.CTkTabview):
             debug_menu = DebugMenu(self)  # Pass the main window as parent
         else:
             debug_menu.focus()
-        
+
+    def search_date(self):
+        global date_request, quest_complete_update
+        self.date_error_prompt.grid_forget()
+        year = self.activity_year.get()
+        month = self.activity_month.get()
+        day = self.activity_day.get()
+
+        self.activity_year.delete(0, ctk.END)
+        self.activity_month.delete(0, ctk.END)
+        self.activity_day.delete(0, ctk.END)
+        self.activity_search.focus_set()
+
+        try:
+            date_request = f"{year}-{month}-{day}"
+            date_request  = f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
+            datetime.strptime(date_request, "%Y-%m-%d")
+            if date_request == str(date.today()):
+                self.activity_day_title.configure(text=f"Today: {date_request}")
+            else:
+                self.activity_day_title.configure(text=date_request)
+
+        except ValueError:
+            date_request = str(date.today())
+            self.date_error_prompt.grid(row=0, column=1, columnspan=2)
+        quest_complete_update = True
+
 class DrawPieChart(ctk.CTkFrame):
     def __init__(self, master, data, **kwargs):
         super().__init__(master, **kwargs)
@@ -995,7 +1062,8 @@ def setup_sql():
                 app_name TEXT NOT NULL,
                 time INTEGER NOT NULL,
                 maximum INTEGER NOT NULL,
-                score_earn INTEGER NOT NULL
+                score_earn INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
             );
         ''')
         
@@ -1020,17 +1088,20 @@ def setup_sql():
                 CREATE TABLE IF NOT EXISTS new_app_name(
                     id INTEGER PRIMARY KEY,
                     old_name TEXT NOT NULL,
-                    new_name TEXT
+                    new_name TEXT,
+                    date TEXT NOT NULL,
+                    timestamp TEXT NOT NULL
             );
         ''')
 
         cursor.execute('''
                 CREATE TABLE IF NOT EXISTS failed_quests(
                     id INTEGER PRIMARY KEY,
-                    date TEXT NOT NULL, --Store as YYYY-MM-DD
+                    date TEXT NOT NULL,
                     app_name TEXT NOT NULL,
                     time INTEGER NOT NULL,
-                    score_deduct INTEGER NOT NULL
+                    score_deduct INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL
             );
         ''')
         
@@ -1273,7 +1344,7 @@ def check_quest(app_name):
     if (quest_list) and (app_name in quest_list):
         task_score = determine_score()
         
-        if app_name in app_dict:
+        if (app_name in app_dict) and (app_name in quest_dict):
             if quest_dict[app_name]["time"] <= app_dict[app_name]:
                 if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
                     conn = sqlite3.connect('sproutime.db')
@@ -1284,8 +1355,9 @@ def check_quest(app_name):
                         quest = cursor.fetchone()
                         quest_time = quest[0]
                         maximum = quest[1]
+                        current_time = datetime.now().strftime("%H:%M:%S")
                         
-                        cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
+                        cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn, timestamp) VALUES (?, ?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score, current_time))
                         conn.commit()
                     except sqlite3.Error as e:
                         if DEBUG: print(f"An SQL error occurred: {e}")
@@ -1309,9 +1381,10 @@ def check_quest(app_name):
                     try:
                         cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
                         quest_time = cursor.fetchone()[0]
+                        current_time = datetime.now().strftime("%H:%M:%S")
                     
                         cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app_name, str(date.today())))
-                        cursor.execute("INSERT INTO failed_quests (date, app_name, time, score_deduct) VALUES (?, ?, ?, ?)", (str(date.today()), app_name, quest_time, task_score))
+                        cursor.execute("INSERT INTO failed_quests (date, app_name, time, score_deduct, timestamp) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, task_score, current_time))
                         conn.commit()
                     except sqlite3.Error as e:
                         if DEBUG: print(f"An SQL error occurred: {e}")
@@ -1340,8 +1413,9 @@ def check_quest(app_name):
                 quest_time = quest[0]
                 maximum = quest[1]
                 completed_list.append(app_name)
+                current_time = datetime.now().strftime("%H:%M:%S")
                 
-                cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score))
+                cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn, timestamp) VALUES (?, ?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, maximum, task_score, current_time))
                 conn.commit()
             except sqlite3.Error as e:
                 if DEBUG: print(f"An SQL error occurred: {e}")
@@ -1381,7 +1455,7 @@ def determine_score():
     
     #Streak Multiplier
     multiplier = 1 + ((current_streak // 7) + 1) * 0.1
-    score = score * multiplier
+    score = math.floor(score * multiplier)
 
     return score
     
@@ -1409,9 +1483,10 @@ def update_log(today):
             for quest in quests:
                 quest_time = quest[0]
                 app_name = quest[1]
+                current_time = datetime.now().strftime("%H:%M:%S")
                 
                 if (app_name in quest_list) and (app_name not in failed_list):
-                    cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn) VALUES (?, ?, ?, 0, ?)", (today, app_name, quest_time, task_score))
+                    cursor.execute("INSERT INTO quest_completion (date, app_name, time, maximum, score_earn, timestamp) VALUES (?, ?, ?, 0, ?, ?)", (today, app_name, quest_time, task_score, current_time))
                 elif (app_name in failed_list):
                     cursor.execute("DELETE FROM quest_completion WHERE app_name = ? AND date = ?", (app, today))
 
@@ -1509,6 +1584,9 @@ detected_app = []
 appname_label_dict = {}
 apptime_label_dict = {}
 appquest_label_dict = {}
+
+# Activity Log Tab UI
+date_request = str(date.today())
 
 google = "Google Chrome"
 
