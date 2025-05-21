@@ -1344,7 +1344,7 @@ def check_quest(app_name):
     if (quest_list) and (app_name in quest_list):
         task_score = determine_score()
         
-        if (app_name in app_dict) and (app_name in quest_dict):
+        if (app_name in app_dict):
             if quest_dict[app_name]["time"] <= app_dict[app_name]:
                 if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
                     conn = sqlite3.connect('sproutime.db')
