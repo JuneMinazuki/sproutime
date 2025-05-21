@@ -135,6 +135,13 @@ class Tabview(ctk.CTkTabview):
 
         self.activitytab_scrollable = ctk.CTkScrollableFrame(self.score_tab, width=900, height=500)
         self.activitytab_scrollable.grid(row=1)
+        bg_color = self.activitytab_scrollable.cget("fg_color")
+        self.activitytab_scrollable.configure(
+            scrollbar_fg_color=bg_color,
+            scrollbar_button_color=bg_color,
+            scrollbar_button_hover_color=bg_color
+        )
+
 
         self.activity_day_title = ctk.CTkLabel(self.activity_nav_frame, text="Today", font=(None, 15, "bold"))
         self.activity_day_title.grid(row=0, column=0, sticky="w", pady=(0,10))
@@ -446,23 +453,21 @@ class Tabview(ctk.CTkTabview):
                 finally:
                     if conn:
                         conn.close()
-                print(activity_log_dict)
 
                 for widget in self.activitytab_scrollable.winfo_children():
-                    widget.destroy()
+                    widget.pack_forget()
 
                 sorted_activity_log_dict = dict(sorted(activity_log_dict.items(), key=lambda x: datetime.strptime(x[0], "%H:%M:%S").time()))
                 for time, info in sorted_activity_log_dict.items():
-                    print(sorted_activity_log_dict)
-                    self.activity_frame = ctk.CTkFrame(self.activitytab_scrollable, width=700, height=40, fg_color="#515151")
-                    self.activity_frame.grid(pady=3, sticky="w")
-                    self.activity_frame.grid_propagate(False)
+                    activity_frame = ctk.CTkFrame(self.activitytab_scrollable, width=700, height=40, fg_color="#515151")
+                    activity_frame.grid(pady=3, sticky="w")
+                    activity_frame.grid_propagate(False)
 
-                    self.activity_time = ctk.CTkLabel(self.activity_frame, text=time, font=(None, 15, "bold"))
-                    self.activity_time.place(x=10, rely=0.5, anchor="w")
+                    activity_time = ctk.CTkLabel(activity_frame, text=time, font=(None, 15, "bold"))
+                    activity_time.place(x=10, rely=0.5, anchor="w")
 
-                    self.activity_info = ctk.CTkLabel(self.activity_frame, text=info)
-                    self.activity_info.place(x=100, rely=0.5, anchor="w")
+                    activity_info = ctk.CTkLabel(activity_frame, text=info)
+                    activity_info.place(x=100, rely=0.5, anchor="w")
 
                 quest_complete_update = False
             sleep(update_tick)
@@ -770,7 +775,7 @@ class Tabview(ctk.CTkTabview):
             debug_menu.focus()
 
     def search_date(self):
-        global date_request
+        global date_request, quest_complete_update
         year = self.activity_year.get()
         month = self.activity_month.get()
         day = self.activity_day.get()
@@ -781,6 +786,8 @@ class Tabview(ctk.CTkTabview):
             datetime.strptime(date_request, "%Y-%m-%d")
         except ValueError:
             date_request = str(date.today())
+
+        quest_complete_update = True
 
 class DrawPieChart(ctk.CTkFrame):
     def __init__(self, master, data, **kwargs):
@@ -1316,7 +1323,7 @@ def check_quest(app_name):
     if (quest_list) and (app_name in quest_list):
         task_score = determine_score()
         
-        if app_name in app_dict:
+        if (app_name in app_dict) and (app_name in quest_dict):
             if quest_dict[app_name]["time"] <= app_dict[app_name]:
                 if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
                     conn = sqlite3.connect('sproutime.db')
