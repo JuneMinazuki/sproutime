@@ -1,4 +1,5 @@
 import sys
+import math
 
 #Check OS and popup for missing libraries
 try:
@@ -37,9 +38,8 @@ class Tabview(ctk.CTkTabview):
             
         self.progress_thread = None
         self.quest_thread = None
-        self.score_thread = None
+        self.activity_thread = None
         self.stats_thread = None
-        self.bar_thread = None
 
         #Create widget
         self.create_progress_widgets()
@@ -124,17 +124,19 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
 
     def create_score_widgets(self):
-        self.score_tab = self.add("Score")
+        self.activity_tab = self.add("Activity")
 
         # Pending for removal
-        self.completed_list_TB = ctk.CTkTextbox(self.score_tab)
+        self.completed_list_TB = ctk.CTkTextbox(self.activity_tab)
 
-        self.activity_nav_frame = ctk.CTkFrame(self.score_tab, width=900, height=100)
+        self.activity_nav_frame = ctk.CTkFrame(self.activity_tab, width=900, height=100)
         self.activity_nav_frame.grid(row=0)
         self.activity_nav_frame.grid_propagate(False)
 
-        self.activitytab_scrollable = ctk.CTkScrollableFrame(self.score_tab, width=900, height=500)
-        self.activitytab_scrollable.grid(row=1)
+        self.date_error_prompt = ctk.CTkLabel(self.activity_nav_frame, text="Invalid date: Please insert a valid date (YYYY-MM-DD)", text_color="red")
+
+        self.activitytab_scrollable = ctk.CTkScrollableFrame(self.activity_tab, width=900, height=500)
+        self.activitytab_scrollable.grid(row=2)
         bg_color = self.activitytab_scrollable.cget("fg_color")
         self.activitytab_scrollable.configure(
             scrollbar_fg_color=bg_color,
@@ -143,7 +145,7 @@ class Tabview(ctk.CTkTabview):
         )
 
 
-        self.activity_day_title = ctk.CTkLabel(self.activity_nav_frame, text="Today", font=(None, 15, "bold"))
+        self.activity_day_title = ctk.CTkLabel(self.activity_nav_frame, text=f"Today: {str(date.today())}", font=(None, 15, "bold"))
         self.activity_day_title.grid(row=0, column=0, sticky="w", pady=(0,10))
 
         self.activity_year = ctk.CTkEntry(self.activity_nav_frame, placeholder_text="Year")
@@ -159,7 +161,7 @@ class Tabview(ctk.CTkTabview):
         self.activity_search.grid(row=1, column=3, padx=20, sticky="w", pady=(0,30))
         
         for col in range(1):
-            self.score_tab.columnconfigure(col, weight=1)
+            self.activity_tab.columnconfigure(col, weight=1)
         
     def create_stats_widgets(self):
         self.stat_tab = self.add("Stats")
@@ -331,7 +333,7 @@ class Tabview(ctk.CTkTabview):
                     if app not in app_dict:
                         detected_app.clear()
                         for widget in self.progress_scrollable.winfo_children():
-                            widget.destroy()
+                            widget.pack_forget()
                     
                 app_time_update = False
             sleep(update_tick)
@@ -408,7 +410,7 @@ class Tabview(ctk.CTkTabview):
                 quest_list_update = False
             sleep(update_tick)
             
-    def update_score(self):
+    def update_activity(self):
         global running, quest_complete_update, update_tick, old_name_list, date_request
         
         while running:
@@ -455,7 +457,7 @@ class Tabview(ctk.CTkTabview):
                         conn.close()
 
                 for widget in self.activitytab_scrollable.winfo_children():
-                    widget.pack_forget()
+                    widget.grid_forget()
 
                 sorted_activity_log_dict = dict(sorted(activity_log_dict.items(), key=lambda x: datetime.strptime(x[0], "%H:%M:%S").time()))
                 for time, info in sorted_activity_log_dict.items():
@@ -583,7 +585,7 @@ class Tabview(ctk.CTkTabview):
         tab = self.get()
         self.progress_active = tab == "Progress"
         self.quest_active = tab == "Quest"
-        self.score_active = tab == "Score"
+        self.activity_active = tab == "Activity"
         self.stats_active = tab == "Stats"
 
         #Progess Tab
@@ -603,10 +605,10 @@ class Tabview(ctk.CTkTabview):
             pass
         
         #Score Tab
-        if self.score_active and (self.score_thread is None or not self.score_thread.is_alive()):
-            self.score_thread = threading.Thread(target=self.update_score, daemon=True)
-            self.score_thread.start()
-        elif not self.score_active and self.score_thread and self.score_thread.is_alive():
+        if self.activity_active and (self.activity_thread is None or not self.activity_thread.is_alive()):
+            self.activity_thread = threading.Thread(target=self.update_activity, daemon=True)
+            self.activity_thread.start()
+        elif not self.activity_active and self.activity_thread and self.activity_thread.is_alive():
             # The thread will naturally pause in its while loop
             pass
         
@@ -747,7 +749,7 @@ class Tabview(ctk.CTkTabview):
             conn.commit()
             
             quest_list.append(name)
-            quest_dict[app] = {"maximum": maximum, "time": minutes * 60}
+            quest_dict[name] = {"maximum": switch_var.get(), "time": minutes * 60}
         except sqlite3.Error as e:
             if DEBUG: print(f"An SQL error occurred: {e}")
             conn.rollback()
@@ -776,17 +778,28 @@ class Tabview(ctk.CTkTabview):
 
     def search_date(self):
         global date_request, quest_complete_update
+        self.date_error_prompt.grid_forget()
         year = self.activity_year.get()
         month = self.activity_month.get()
         day = self.activity_day.get()
+
+        self.activity_year.delete(0, ctk.END)
+        self.activity_month.delete(0, ctk.END)
+        self.activity_day.delete(0, ctk.END)
+        self.activity_search.focus_set()
 
         try:
             date_request = f"{year}-{month}-{day}"
             date_request  = f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
             datetime.strptime(date_request, "%Y-%m-%d")
+            if date_request == str(date.today()):
+                self.activity_day_title.configure(text=f"Today: {date_request}")
+            else:
+                self.activity_day_title.configure(text=date_request)
+
         except ValueError:
             date_request = str(date.today())
-
+            self.date_error_prompt.grid(row=0, column=1, columnspan=2)
         quest_complete_update = True
 
 class DrawPieChart(ctk.CTkFrame):
@@ -1434,7 +1447,7 @@ def determine_score():
     
     #Streak Multiplier
     multiplier = 1 + ((current_streak // 7) + 1) * 0.1
-    score = score * multiplier
+    score = math.floor(score * multiplier)
 
     return score
     
