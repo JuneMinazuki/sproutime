@@ -11,6 +11,7 @@ try:
     if sys.platform == 'darwin':
         import AppKit
         import ScriptingBridge
+        import subprocess
     elif sys.platform == 'win32':
         import psutil
         import win32gui
@@ -1145,23 +1146,30 @@ def get_active_tab_name():
 def notify(app_name, info):
     if appname_dict and app_name in old_name_list:
         app_name = appname_dict[app_name]
+        
+    if info == "min time completed":
+        Title = f"Quest Completed for {app_name}"
+        Msg = f"Well done! You've spent enough time on {app_name}"
+    
+    elif info == "max time failed":
+        Title = f"Quest Failed for {app_name}"
+        Msg = f"Oh no! You've exceeded your screentime limit for {app_name}"
+
+    elif info == "10 mins left":
+        Title = f"10 minutes left for {app_name}"
+        Msg = f"You are nearing your screentime limit for {app_name}"
 
     if sys.platform == 'darwin':
-        pass
-        
-    elif sys.platform == 'win32':
-        if info == "min time completed":
-            Title = f"Quest Completed for {app_name}"
-            Msg = f"Well done! You've spent enough time on {app_name}"
-        
-        elif info == "max time failed":
-            Title = f"Quest Failed for {app_name}"
-            Msg = f"Oh no! You've exceeded your screentime limit for {app_name}"
+        applescript = f'display notification "{Msg}" with title "{Title}" sound name "Blow"'
 
-        elif info == "10 mins left":
-            Title = f"10 minutes left for {app_name}"
-            Msg = f"You are nearing your screentime limit for {app_name}"
+        try:
+            subprocess.run(["osascript", "-e", applescript], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error sending notification: {e}")
+        except FileNotFoundError:
+            print("Error: 'osascript' command not found. Are you on macOS?")
         
+    elif sys.platform == 'win32':      
         noti = winotify.Notification(app_id="Sproutime",
                 title = Title,
                 msg = Msg,
