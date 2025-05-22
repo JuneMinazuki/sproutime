@@ -826,6 +826,7 @@ class Tabview(ctk.CTkTabview):
         check_quest(app_name)
 
         quest_list_update = True
+        app_time_update = True
         quest_complete_update = True
         
     def save_quest_time(self):
