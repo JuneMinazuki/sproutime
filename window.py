@@ -248,21 +248,21 @@ class Tabview(ctk.CTkTabview):
 
     def create_treeview_widgets(self):
         global app_time_update, running, point
-        self.treeview_tab = self.add("TreeView")
+        self.treeview_tab = self.add("Garden")
         self.treeview_frame = ctk.CTkFrame(self.treeview_tab)
         self.treeview_frame.pack(padx=10, pady=10, fill="both", expand=True)
         self.treeview_frame.columnconfigure(0, weight=1)
         
         point = 0
         # show treepoint in label
-        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: {point}")
+        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: {point}, Image will change when point >= 100", font=(None, 15, "bold"))
         self.treeview_label.pack(pady=10)
         
     def display_image(self, parent, image_path):
         try:
             img = Image.open(image_path)
-            img = img.resize((300, 200), Image.Resampling.LANCZOS)
-            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(300, 200))
+            img = img.resize((450, 450), Image.Resampling.LANCZOS)
+            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(450, 450))
             label = ctk.CTkLabel(parent, image=photo, text="")
             label.image = photo  # Keep a reference!
             label.pack(pady=20)
@@ -311,13 +311,13 @@ class Tabview(ctk.CTkTabview):
                 conn.close()
         
         # update label with point
-        self.treeview_label.configure(text=f"Point: {point}")
+        self.treeview_label.configure(text=f"Point: {point}, Image will change when point >= 100")
 
         # update image with your own image path if point >=100
         if point >= 100:
-            self.display_image(self.treeview_tab, "your_image1.jpg")
-        else:
             self.display_image(self.treeview_tab, "your_image2.jpg")
+        else:
+            self.display_image(self.treeview_tab, "your_image1.jpg")
             
         
 
@@ -666,7 +666,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_active = tab == "Quest"
         self.activity_active = tab == "Activity"
         self.stats_active = tab == "Stats"
-        self.treeview_active = tab == "TreeView"
+        self.treeview_active = tab == "Garden"
 
         #Progess Tab
         if self.progress_active and (self.progress_thread is None or not self.progress_thread.is_alive()):
