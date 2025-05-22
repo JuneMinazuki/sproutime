@@ -8,6 +8,7 @@ try:
     from time import sleep
     import sqlite3
     from datetime import datetime, date, timedelta
+    from PIL import Image, ImageTk
 
     if sys.platform == 'darwin':
         import AppKit
@@ -41,6 +42,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_thread = None
         self.activity_thread = None
         self.stats_thread = None
+        self.treeview_thread = None
 
         #Create widget
         self.create_progress_widgets()
@@ -48,6 +50,7 @@ class Tabview(ctk.CTkTabview):
         self.create_score_widgets()
         self.create_stats_widgets()
         self.create_setting_widgets()
+        self.create_treeview_widgets()
 
         self.start_updating()
 
@@ -242,6 +245,81 @@ class Tabview(ctk.CTkTabview):
         #Debug Button
         self.debug_button = ctk.CTkButton(master=self.setting_tab, text="Debug", command=self.open_debug_menu)
         self.debug_button.pack(padx=20, pady=10)
+
+    def create_treeview_widgets(self):
+        global app_time_update, running, point
+        self.treeview_tab = self.add("Garden")
+        self.treeview_frame = ctk.CTkFrame(self.treeview_tab)
+        self.treeview_frame.pack(padx=10, pady=10, fill="both", expand=True)
+        self.treeview_frame.columnconfigure(0, weight=1)
+        
+        point = 0
+        # show treepoint in label
+        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: {point}, Image will change when point >= 100", font=(None, 15, "bold"))
+        self.treeview_label.pack(pady=10)
+        
+    def display_image(self, parent, image_path):
+        try:
+            img = Image.open(image_path)
+            img = img.resize((450, 450), Image.Resampling.LANCZOS)
+            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(450, 450))
+            label = ctk.CTkLabel(parent, image=photo, text="")
+            label.image = photo  # Keep a reference!
+            label.pack(pady=20)
+        except Exception as e:
+            label = ctk.CTkLabel(parent, text=f"Error loading image:\n{e}")
+            label.pack(pady=20)
+        
+        # only show one image only
+        for widget in parent.winfo_children():
+            if isinstance(widget, ctk.CTkLabel) and widget != label:
+                widget.destroy()
+                
+
+    def update_treeview(self):
+        # update treeview with point
+        global running, app_time_update, point
+        # point_earn from quest_completion
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT score_earn FROM quest_completion")
+            result = cursor.fetchall()
+            point = 0
+            for row in result:
+                point += row[0]
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        # update treeview with deducted point
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT score_deduct FROM failed_quests")
+            result = cursor.fetchall()
+            for row in result:
+                point -= row[0]
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+        
+        # update label with point
+        self.treeview_label.configure(text=f"Point: {point}, Image will change when point >= 100")
+
+        # update image with your own image path if point >=100
+        if point >= 100:
+            self.display_image(self.treeview_tab, "your_image2.jpg")
+        else:
+            self.display_image(self.treeview_tab, "your_image1.jpg")
+            
+        
 
     def update_progress(self):
         global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, quest_list, detected_app, apptime_label_dict, appquest_label_dict, appname_label_dict
@@ -588,6 +666,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_active = tab == "Quest"
         self.activity_active = tab == "Activity"
         self.stats_active = tab == "Stats"
+        self.treeview_active = tab == "Garden"
 
         #Progess Tab
         if self.progress_active and (self.progress_thread is None or not self.progress_thread.is_alive()):
@@ -618,6 +697,14 @@ class Tabview(ctk.CTkTabview):
             self.stats_thread = threading.Thread(target=self.update_stats, daemon=True)
             self.stats_thread.start()
         elif not self.stats_active and self.stats_thread and self.stats_thread.is_alive():
+            # The thread will naturally pause in its while loop
+            pass
+
+        #Treeview Tab
+        if self.treeview_active and (self.treeview_thread is None or not self.treeview_thread.is_alive()):
+            self.treeview_thread = threading.Thread(target=self.update_treeview, daemon=True)
+            self.treeview_thread.start()    
+        elif not self.treeview_active and self.treeview_thread and self.treeview_thread.is_alive():
             # The thread will naturally pause in its while loop
             pass
 
@@ -1040,7 +1127,7 @@ class DebugMenu(ctk.CTkToplevel):
         
     def close_debug_menu(self):
         self.destroy() 
-    
+
 def setup_sql():   
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
