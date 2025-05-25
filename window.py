@@ -595,8 +595,9 @@ class Tabview(ctk.CTkTabview):
                     current_streak = 0
                     longest_streak = 0
                     count = 0
+                    yesterday = date.today() - timedelta(days=1)
                     
-                    cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(date.today()),))
+                    cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(yesterday),))
                     days = cursor.fetchall()
                     
                     for day in days:
@@ -1446,6 +1447,10 @@ def check_quest(app_name):
                 cursor = conn.cursor()
                 
                 try:
+                    cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
+                    quest_time = cursor.fetchone()[0]
+                    current_time = datetime.now().strftime("%H:%M:%S")
+                        
                     cursor.execute("SELECT COUNT(*) FROM activity_log WHERE app_name = ? AND date = ? AND type = 1", (app_name, str(date.today())))
                     if cursor.fetchone()[0] == 0:
                         cursor.execute("INSERT INTO activity_log (date, app_name, time, type, score_earn, timestamp) VALUES (?, ?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, 1, task_score, current_time))
@@ -1463,9 +1468,7 @@ def check_quest(app_name):
 
             try:
                 cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
-                quest = cursor.fetchone()
-                quest_time = quest[0]
-                maximum = quest[1]
+                quest_time = cursor.fetchone()[0]
                 completed_list.append(app_name)
                 current_time = datetime.now().strftime("%H:%M:%S")
                 
@@ -1488,8 +1491,9 @@ def determine_score():
     cursor = conn.cursor()
     
     current_streak = 0
+    yesterday = date.today() - timedelta(days=1)
     try:
-        cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(date.today()),))
+        cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(yesterday),))
         days = cursor.fetchall()
         
         for day in days:
