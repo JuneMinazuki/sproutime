@@ -625,8 +625,10 @@ class Tabview(ctk.CTkTabview):
                         self.streak_bar.set(current_streak / longest_streak)
                     self.update_idletasks()
                     day_left = longest_streak - current_streak
-                    self.streak_label.configure(text=f'{day_left} more day(s) to go!')
-                    
+                    if longest_streak > current_streak:
+                        self.streak_label.configure(text=f'{day_left} more day(s) to go!')
+                    else:
+                        self.streak_label.configure(text='You have broken your record, keep on going!')
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An SQL error occurred: {e}")
                     conn.rollback()
