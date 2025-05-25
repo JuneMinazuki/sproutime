@@ -275,10 +275,9 @@ class Tabview(ctk.CTkTabview):
             if isinstance(widget, ctk.CTkLabel) and widget != label:
                 widget.destroy()
                 
-
     def update_treeview(self):
         # update treeview with point
-        global running, app_time_update, point
+        global running, app_time_update
         # point_earn from quest_completion
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
@@ -295,21 +294,6 @@ class Tabview(ctk.CTkTabview):
             if conn:
                 conn.close()
 
-        # update treeview with deducted point
-        conn = sqlite3.connect('sproutime.db')
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT score_deduct FROM activity_log WHERE type = 2")
-            result = cursor.fetchall()
-            for row in result:
-                point -= row[0]
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
-            conn.rollback()
-        finally:
-            if conn:
-                conn.close()
-        
         # update label with point
         self.treeview_label.configure(text=f"Point: {point}, Image will change when point >= 100")
 
@@ -317,9 +301,7 @@ class Tabview(ctk.CTkTabview):
         if point >= 100:
             self.display_image(self.treeview_tab, "your_image2.jpg")
         else:
-            self.display_image(self.treeview_tab, "your_image1.jpg")
-            
-        
+            self.display_image(self.treeview_tab, "your_image1.jpg")     
 
     def update_progress(self):
         global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, quest_list, detected_app, apptime_label_dict, appquest_label_dict, appname_label_dict
@@ -436,10 +418,8 @@ class Tabview(ctk.CTkTabview):
                         maximum = ">" if sign == 1 else "<"
                         if appname_dict and app in old_name_list:
                             app_name = appname_dict[app]
-                            custom_name = app
                         else:
                             app_name = app
-                            custom_name = 'Custom Name'
                         
                         quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=150)
                         quest_box.pack(pady=5)
@@ -469,7 +449,7 @@ class Tabview(ctk.CTkTabview):
                         maximum_switch.grid(row=0, column=1, padx=(10, 0), pady=10, sticky='e')
                         
                         #Change Name 
-                        entry = ctk.CTkEntry(quest_box, placeholder_text=custom_name)
+                        entry = ctk.CTkEntry(quest_box, placeholder_text='Custom Name')
                         entry.grid(row=2, column=0, padx=30, pady=5, sticky="w")
             
                         #Delete Button
@@ -615,8 +595,9 @@ class Tabview(ctk.CTkTabview):
                     current_streak = 0
                     longest_streak = 0
                     count = 0
+                    yesterday = date.today() - timedelta(days=1)
                     
-                    cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(date.today()),))
+                    cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(yesterday),))
                     days = cursor.fetchall()
                     
                     for day in days:
@@ -644,8 +625,10 @@ class Tabview(ctk.CTkTabview):
                         self.streak_bar.set(current_streak / longest_streak)
                     self.update_idletasks()
                     day_left = longest_streak - current_streak
-                    self.streak_label.configure(text=f'{day_left} more day(s) to go!')
-                    
+                    if longest_streak > current_streak:
+                        self.streak_label.configure(text=f'{day_left} more day(s) to go!')
+                    else:
+                        self.streak_label.configure(text='You have broken your record, keep on going!')
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An SQL error occurred: {e}")
                     conn.rollback()
@@ -1088,7 +1071,7 @@ class DebugMenu(ctk.CTkToplevel):
         quest_list_update = True
             
     def reset_database(self):
-        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, total_points, appname_dict, old_name_list
+        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
         
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
@@ -1117,8 +1100,6 @@ class DebugMenu(ctk.CTkToplevel):
         quest_dict = {}
         completed_list = []
         failed_list = []
-        total_points = 0
-
         appname_dict = {}
         old_name_list = []
         
@@ -1317,14 +1298,13 @@ def notify(app_name, info):
         noti.show()
 
 def load_past_data():
-    global app_time_update, app_dict, completed_list, failed_list, total_points, appname_dict, old_name_list, quest_list, quest_dict, detected_app
+    global app_time_update, app_dict, completed_list, failed_list, appname_dict, old_name_list, quest_list, quest_dict, detected_app
     
     app_dict = {}
     quest_list = []
     quest_dict = {}
     completed_list = []
     failed_list = []
-    total_points = 0
     
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
@@ -1353,13 +1333,6 @@ def load_past_data():
             
             quest_list.append(app)
             quest_dict[app] = {"maximum": maximum, "time": time * 60}
-
-        #Total Score
-        cursor.execute("SELECT SUM(score_earn) FROM activity_log WHERE type = 1")
-        score = cursor.fetchone()
-        
-        if score and score[0] is not None:
-            total_points = score[0]
 
         #Updated new names
         cursor.execute("SELECT app_name, new_name FROM activity_log WHERE type = 3")
@@ -1408,7 +1381,7 @@ def update_time():
             sleep(1)
 
 def check_quest(app_name):
-    global quest_complete_update, app_dict, quest_list, quest_dict, total_points
+    global quest_complete_update, app_dict, quest_list, quest_dict
     
     if (quest_list) and (app_name in quest_list):
         task_score = determine_score()
@@ -1438,7 +1411,6 @@ def check_quest(app_name):
                             conn.close()
 
                     completed_list.append(app_name)
-                    total_points += task_score
                     notify(app_name, "min time completed")
                             
                 #Failed Quest      
@@ -1464,8 +1436,6 @@ def check_quest(app_name):
                         if conn:
                             conn.close()
                     
-                    total_points -= task_score
-                    
                     notify(app_name, "max time failed")
 
                 quest_complete_update = True
@@ -1479,6 +1449,10 @@ def check_quest(app_name):
                 cursor = conn.cursor()
                 
                 try:
+                    cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
+                    quest_time = cursor.fetchone()[0]
+                    current_time = datetime.now().strftime("%H:%M:%S")
+                        
                     cursor.execute("SELECT COUNT(*) FROM activity_log WHERE app_name = ? AND date = ? AND type = 1", (app_name, str(date.today())))
                     if cursor.fetchone()[0] == 0:
                         cursor.execute("INSERT INTO activity_log (date, app_name, time, type, score_earn, timestamp) VALUES (?, ?, ?, ?, ?, ?)", (str(date.today()), app_name, quest_time, 1, task_score, current_time))
@@ -1496,9 +1470,7 @@ def check_quest(app_name):
 
             try:
                 cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
-                quest = cursor.fetchone()
-                quest_time = quest[0]
-                maximum = quest[1]
+                quest_time = cursor.fetchone()[0]
                 completed_list.append(app_name)
                 current_time = datetime.now().strftime("%H:%M:%S")
                 
@@ -1521,8 +1493,9 @@ def determine_score():
     cursor = conn.cursor()
     
     current_streak = 0
+    yesterday = date.today() - timedelta(days=1)
     try:
-        cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(date.today()),))
+        cursor.execute("SELECT date, quest_completed, quest_set FROM streak WHERE date <= ? ORDER BY date DESC", (str(yesterday),))
         days = cursor.fetchall()
         
         for day in days:
@@ -1647,7 +1620,6 @@ quest_list = []
 quest_dict = {}
 completed_list = []
 failed_list = []
-total_points = 0    # Right now +100 per completed quest
 slider_var = ctk.IntVar(value=1)
 switch_var = ctk.StringVar(value=">")
 
