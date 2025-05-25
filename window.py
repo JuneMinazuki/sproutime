@@ -436,10 +436,8 @@ class Tabview(ctk.CTkTabview):
                         maximum = ">" if sign == 1 else "<"
                         if appname_dict and app in old_name_list:
                             app_name = appname_dict[app]
-                            custom_name = app
                         else:
                             app_name = app
-                            custom_name = 'Custom Name'
                         
                         quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=150)
                         quest_box.pack(pady=5)
@@ -469,7 +467,7 @@ class Tabview(ctk.CTkTabview):
                         maximum_switch.grid(row=0, column=1, padx=(10, 0), pady=10, sticky='e')
                         
                         #Change Name 
-                        entry = ctk.CTkEntry(quest_box, placeholder_text=custom_name)
+                        entry = ctk.CTkEntry(quest_box, placeholder_text='Custom Name')
                         entry.grid(row=2, column=0, padx=30, pady=5, sticky="w")
             
                         #Delete Button
