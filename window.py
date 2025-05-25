@@ -1137,28 +1137,14 @@ def setup_sql():
     try:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS quest (
-                quest_id INTEGER PRIMARY KEY,
                 app_name TEXT NOT NULL,
                 time INTEGER NOT NULL,
                 maximum INTEGER NOT NULL
             );
         ''')
         
-        # cursor.execute('''
-        #     CREATE TABLE IF NOT EXISTS quest_completion (
-        #         log_id INTEGER PRIMARY KEY,
-        #         date TEXT NOT NULL, --Store as YYYY-MM-DD
-        #         app_name TEXT NOT NULL,
-        #         time INTEGER NOT NULL,
-        #         maximum INTEGER NOT NULL,
-        #         score_earn INTEGER NOT NULL,
-        #         timestamp TEXT NOT NULL
-        #     );
-        # ''')
-        
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS app_time (
-                log_id INTEGER PRIMARY KEY,
                 app_name TEXT NOT NULL,
                 date TEXT NOT NULL, --Store as YYYY-MM-DD
                 duration INTEGER NOT NULL
@@ -1172,27 +1158,6 @@ def setup_sql():
                 quest_set INTEGER NOT NULL
             );
         ''')
-
-        # cursor.execute('''
-        #         CREATE TABLE IF NOT EXISTS new_app_name(
-        #             id INTEGER PRIMARY KEY,
-        #             old_name TEXT NOT NULL,
-        #             new_name TEXT,
-        #             date TEXT NOT NULL,
-        #             timestamp TEXT NOT NULL
-        #     );
-        # ''')
-
-        # cursor.execute('''
-        #         CREATE TABLE IF NOT EXISTS failed_quests(
-        #             id INTEGER PRIMARY KEY,
-        #             date TEXT NOT NULL,
-        #             app_name TEXT NOT NULL,
-        #             time INTEGER NOT NULL,
-        #             score_deduct INTEGER NOT NULL,
-        #             timestamp TEXT NOT NULL
-        #     );
-        # ''')
 
         cursor.execute('''
                 CREATE TABLE IF NOT EXISTS activity_log(
