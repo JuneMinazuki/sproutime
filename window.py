@@ -1589,8 +1589,6 @@ def update_log(today):
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
-    task_score = determine_score()
-    
     try:
         #App Time
         for app in app_dict:
