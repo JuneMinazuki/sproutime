@@ -124,6 +124,19 @@ class Tabview(ctk.CTkTabview):
         )
         self.quest_list_frame.pack(padx=10, pady=15)
         
+        self.export_import_frame = ctk.CTkFrame(self.quest_tab)
+        self.export_import_frame.pack(padx=100, fill="x")
+        
+        self.export_import_frame.columnconfigure((0,1), weight=1)
+        
+        #Import Button
+        self.import_button = ctk.CTkButton(self.export_import_frame, text="Import Quest", command=self.import_quest)
+        self.import_button.grid(row=0, column=0, padx=10, sticky='w')
+        
+        #Export Button
+        self.export_button = ctk.CTkButton(self.export_import_frame, text="Export Quest", command=self.export_quest)
+        self.export_button.grid(row=0, column=1, padx=10, sticky='e')
+        
         self.refresh_app_list()
         quest_list_update = True
 
@@ -874,7 +887,13 @@ class Tabview(ctk.CTkTabview):
             date_request = str(date.today())
             self.date_error_prompt.grid(row=0, column=1, columnspan=2)
         quest_complete_update = True
-
+        
+    def import_quest(self):
+        pass
+    
+    def export_quest(self):
+        pass
+    
 class DrawPieChart(ctk.CTkFrame):
     def __init__(self, master, data, **kwargs):
         super().__init__(master, **kwargs)
