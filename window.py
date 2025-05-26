@@ -9,6 +9,9 @@ try:
     import sqlite3
     from datetime import datetime, date, timedelta
     from PIL import Image, ImageTk
+    import json
+    import os
+    from pathlib import Path
 
     if sys.platform == 'darwin':
         import AppKit
@@ -892,7 +895,42 @@ class Tabview(ctk.CTkTabview):
         pass
     
     def export_quest(self):
-        pass
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("SELECT app_name, time, maximum FROM quest")
+            quests = cursor.fetchall()
+            
+            json_data = []
+            for quest in quests:
+                quest_json_dict = {"app_name": quest[0],
+                                   "time": quest[1],
+                                   "maximum": quest[2]}
+                json_data.append(quest_json_dict)
+            
+            json_string = json.dumps(json_data, indent=4)
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An SQL error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
+        home_directory = str(Path.home())
+
+        # Construct the path to the Downloads folder
+        downloads_folder = os.path.join(home_directory, "Downloads")
+        file_name = "sproutime-quest.json"
+        file_path = os.path.join(downloads_folder, file_name)
+        
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(json_string)
+            
+            show_popup("Quest Exported", "Your quest had been exported as a JSON in your Downloads")
+        except Exception as e:
+            print(f"An error occurred while saving the file: {e}")
     
 class DrawPieChart(ctk.CTkFrame):
     def __init__(self, master, data, **kwargs):
@@ -900,7 +938,7 @@ class DrawPieChart(ctk.CTkFrame):
 
         self.data = data
         self.colors = ["#6495ED", "#FFA07A", "#90EE90", "#F08080",
-                       "#B0E0E6", "#A0522D", "#F08080", "#D3D3D3",
+                       "#B0E0E6", "#A0522D", "#F080E1", "#D3D3D3",
                        "#BDB76B", "#AFEEEE", "#ADD8E6", "#FFDAB9"]
 
         self.grid_columnconfigure(0, weight=1)
@@ -1603,6 +1641,27 @@ def show_confirmation(title='Are you sure?', message='Warning: This action canno
     yes_button.grid(row=1, column=0, pady=20, padx=20, sticky='w')
     no_button = ctk.CTkButton(dialog, text="No", command=no_callback)
     no_button.grid(row=1, column=1, pady=20, padx=20, sticky='e')
+
+    # The dialog will block until a button is pressed.
+    dialog.wait_window()
+
+def show_popup(title, message):
+    dialog = ctk.CTkToplevel()
+    dialog.title(title)
+    dialog.geometry("500x140")
+    dialog.attributes('-topmost', True)
+    dialog.grab_set()
+
+    # Create a label to display the message
+    message_label = ctk.CTkLabel(dialog, text=message)
+    message_label.pack(pady=(20,10), padx=20, fill='x')
+    
+    def callback():
+        dialog.destroy()
+
+    # Add buttons to the dialog.
+    okay_button = ctk.CTkButton(dialog, text="Okay", command=callback)
+    okay_button.pack(pady=20, padx=20)
 
     # The dialog will block until a button is pressed.
     dialog.wait_window()
