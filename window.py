@@ -1161,7 +1161,7 @@ def setup_sql():
             conn.close()
 
 def get_active_app_name():
-    global appName
+    global appName, ignored_processes
 
     if sys.platform == 'darwin':
         appName = AppKit.NSWorkspace.sharedWorkspace().activeApplication()['NSApplicationName']
@@ -1176,24 +1176,24 @@ def get_active_app_name():
     elif sys.platform == 'win32':
         foregroundApp = win32gui.GetForegroundWindow()
         _, pid = win32process.GetWindowThreadProcessId(foregroundApp)
-        try:
-            process = psutil.Process(pid)
-            process_name = process.name()
-            appName = process_name.split(".")[0].capitalize()
-            if appName == "Chrome": 
-                tabName = get_active_tab_name()
-                if tabName == "URL not detected":
-                    pass
-                else:
-                    appName = tabName
 
+        try:
+            for process in psutil.process_iter(['pid', 'name']):
+                if process.info['pid'] == pid:
+                    process_name = process.info['name']
+                    if process_name not in ignored_processes:
+                        appName = process_name.split(".")[0].capitalize()
+                        if appName == "Chrome":
+                            tabName = get_active_tab_name()
+                            if tabName != "URL not detected":
+                                appName = tabName
         except Exception as e:
             pass
 
     return appName
 
 def get_all_app_list():
-    global quest_list, google
+    global quest_list, google, ignored_processes
     app_list = []
     
     if sys.platform == 'darwin':
@@ -1207,16 +1207,16 @@ def get_all_app_list():
     elif sys.platform == 'win32':
         for process in psutil.process_iter(['pid', 'name']):
             pid = process.info['pid']
-            ignored_processes = ["Applicationframehost", "Textinputhost"]
 
             def enumWindowsArguments(handle, __):
-                threadID, foundPID = win32process.GetWindowThreadProcessId(handle)
+                _, foundPID = win32process.GetWindowThreadProcessId(handle)
 
                 if foundPID == pid and win32gui.IsWindowVisible(handle):
-                    window_title = win32gui.GetWindowText(handle)
-                    app_name = process.info["name"].split(".")[0].capitalize() # Get all active app name
-                    if app_name not in app_list and app_name not in ignored_processes: 
-                        app_list.append(app_name)
+                    process_name = process.info["name"]
+                    if process_name not in ignored_processes:
+                        app_name = process_name.split(".")[0].capitalize() # Get all active app name
+                        if app_name not in app_list:
+                            app_list.append(app_name)
 
             win32gui.EnumWindows(enumWindowsArguments, None)
               
@@ -1622,6 +1622,7 @@ completed_list = []
 failed_list = []
 slider_var = ctk.IntVar(value=1)
 switch_var = ctk.StringVar(value=">")
+ignored_processes = ["", "explorer.exe", "TextInputHost.exe", "ApplicationFrameHost.exe", "Taskmgr.exe", "SearchHost.exe"]
 
 # Progress Tab UI
 progressbar_dict = {}
