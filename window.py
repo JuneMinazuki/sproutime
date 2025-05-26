@@ -60,9 +60,20 @@ class Tabview(ctk.CTkTabview):
     def create_progress_widgets(self):
         self.progress_tab = self.add("Progress")
 
+        self.progress_sort_frame = ctk.CTkFrame(self.progress_tab, height=100, width=300)
+        self.progress_sort_frame.grid(row=0, column=0, pady=(20,10))
+
+        self.progress_sort_button = ctk.CTkLabel(self.progress_sort_frame, text="Sort by :")
+        self.progress_sort_button.grid(row=0, column=0, padx=(0,6))
+
+        sort_choices = ["Oldest", "Newest", "Longest Screentime", "Shortest Screentime", "Quests"]
+
+        self.progress_sort_combobox = ctk.CTkComboBox(self.progress_sort_frame, values=sort_choices, command=self.change_sort)
+        self.progress_sort_combobox.grid(row=0, column=1)
+
         #Scrollable frame for progress bar
         self.progress_scrollable = ctk.CTkScrollableFrame(self.progress_tab, width=1080, height=500)
-        self.progress_scrollable.pack(padx=10, pady=20)
+        self.progress_scrollable.grid(row=1, column=0)
         bg_color = self.progress_scrollable.cget("fg_color") # Get the background color of the scrollable frame
         self.progress_scrollable.configure( # Hide the scrollbar by making its colors the same as the background
             scrollbar_fg_color=bg_color,
@@ -70,11 +81,11 @@ class Tabview(ctk.CTkTabview):
             scrollbar_button_hover_color=bg_color
         )
 
-        for col in range(3):
-            self.progress_tab.columnconfigure(col, weight=1)
+        for col in range(1):
+            self.progress_tab.grid_columnconfigure(col, weight=1)
 
-        for row in range(5):
-            self.progress_tab.rowconfigure(row, weight=1)
+        for row in range(1):
+            self.progress_tab.grid_rowconfigure(row, weight=1)
 
     def create_quest_widgets(self):
         global quest_list_update
@@ -320,43 +331,71 @@ class Tabview(ctk.CTkTabview):
             self.display_image(self.treeview_tab, "your_image1.jpg")     
 
     def update_progress(self):
-        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, quest_list, detected_app, apptime_label_dict, appquest_label_dict, appname_label_dict
+        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, quest_list, detected_app, apptime_label_dict, appquest_label_dict, appname_label_dict, sort_type, appframe_dict
         while running:
             if app_time_update:
-                for app in app_dict:
-                    conn = sqlite3.connect('sproutime.db')
-                    cursor = conn.cursor()
-
-                    try:
-                        cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app,)) 
+                temp_quest_data = {}
+                conn = sqlite3.connect('sproutime.db')
+                cursor = conn.cursor()
+                try:
+                    for app in app_dict:
+                        cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app,))
                         result = cursor.fetchone()
-                        if result:
-                            time = result[0] / 60
-                            if result[1] == 1:
-                                maximum = ">"
-                            elif result[1] == 0:
-                                maximum = "<"
-                            quest_info = f"{maximum} {time} hour(s)"
+                        temp_quest_data[app] = result
+                except sqlite3.Error as e:
+                    if DEBUG: print(f"An error occurred: {e}")
+                    conn.rollback()
+                finally:
+                    conn.close()
+
+                if sort_type == "Oldest":
+                    sorted_apps = list(app_dict.keys())
+                elif sort_type == "Newest":
+                    sorted_apps = list(reversed(app_dict.keys()))
+                elif sort_type == "Longest Screentime":
+                    sorted_apps = sorted(app_dict.items(), key=lambda item: item[1], reverse=True)
+                    sorted_apps = [app for app, _ in sorted_apps]
+                elif sort_type == "Shortest Screentime":
+                    sorted_apps = sorted(app_dict.items(), key=lambda item: item[1])
+                    sorted_apps = [app for app, _ in sorted_apps]
+                elif sort_type == "Quests":
+                    apps_with_quests = []
+                    apps_without_quests = []
+                    for app in app_dict:
+                        if temp_quest_data.get(app):
+                            apps_with_quests.append(app)
                         else:
-                            quest_info = "No quest set"
-                    except sqlite3.Error as e:
-                        if DEBUG: print(f"An SQL error occurred: {e}")
-                        conn.rollback()
-                    finally:
-                        if conn:
-                            conn.close()
+                            apps_without_quests.append(app)
+                    sorted_apps = apps_with_quests + apps_without_quests
+                else:
+                    sorted_apps = list(app_dict.keys())
+
+                for widget in self.progress_scrollable.winfo_children():
+                    widget.grid_remove()
+
+                for index, app in enumerate(sorted_apps):
+                    result = temp_quest_data.get(app)
+                    if result:
+                        time = result[0] / 60
+                        if result[1] == 1:
+                            maximum = ">"
+                        elif result[1] == 0:
+                            maximum = "<"
+                        quest_info = f"{maximum} {time} hour(s)"
+                    else:
+                        quest_info = "No quest set"
 
                     if appname_dict and app in old_name_list:
                         appname = appname_dict[app]
                     else:
                         appname = app
-                    
-                    time = app_dict[app] 
+
+                    time = app_dict[app]
                     if time >= 60:
                         minutes = time // 60
                         hours = minutes // 60
                         remaining_minutes = minutes % 60
-                        
+
                         if remaining_minutes == 0:
                             time = f'{hours} hour(s)'
                         elif hours == 0:
@@ -370,8 +409,9 @@ class Tabview(ctk.CTkTabview):
                                 
                         #Frame for each app
                         self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=1080, height=150, fg_color="#515151")
-                        self.progress_app_frame.pack(padx=10, pady=10)
+                        self.progress_app_frame.grid(column=0, padx=10, pady=10)
                         self.progress_app_frame.grid_propagate(False)
+                        appframe_dict[app] = self.progress_app_frame
 
                         #Label for app name
                         self.app_label = ctk.CTkLabel(self.progress_app_frame, text=f"{appname}", font=(None, 15, "bold"))
@@ -398,12 +438,12 @@ class Tabview(ctk.CTkTabview):
 
                     else:
                         if self.progress_scrollable.winfo_exists():
+                            appframe_dict[app].grid(row=index, column=0, padx=10, pady=10)
                             apptime_label_dict[app].configure(text=f"{time}")
                             appquest_label_dict[app].configure(text=f"Quest : {quest_info}")
                             appname_label_dict[app].configure(text=f"{appname}")
 
-
-                    if app in quest_list:
+                    if app in quest_list and result:
                         progressbar_dict[app].set(app_dict[app] / (result[0] * 60))
 
                 for app in detected_app:
@@ -411,7 +451,7 @@ class Tabview(ctk.CTkTabview):
                         detected_app.clear()
                         for widget in self.progress_scrollable.winfo_children():
                             widget.pack_forget()
-                    
+
                 app_time_update = False
             sleep(update_tick)
 
@@ -705,6 +745,11 @@ class Tabview(ctk.CTkTabview):
 
     def tab_changed(self):
         self.start_updating()
+
+    def change_sort(self, choice):
+        global sort_type, app_time_update
+        sort_type = choice
+        app_time_update = True
 
     def combobox_callback(self, choice):  
         global temp_quest_app
@@ -1705,9 +1750,11 @@ ignored_processes = ["", "explorer.exe", "TextInputHost.exe", "ApplicationFrameH
 # Progress Tab UI
 progressbar_dict = {}
 detected_app = []
+appframe_dict = {}
 appname_label_dict = {}
 apptime_label_dict = {}
 appquest_label_dict = {}
+sort_type = "Oldest"
 
 # Activity Log Tab UI
 date_request = str(date.today())
