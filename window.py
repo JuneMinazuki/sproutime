@@ -262,16 +262,75 @@ class Tabview(ctk.CTkTabview):
         self.refresh_stat_button.pack(pady=20, padx=10, expand=True)
         
     def create_setting_widgets(self):
+        global allow_noti, theme
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM settings")
+            presettings = cursor.fetchone()
+            if presettings:
+                theme = presettings[0]
+                if presettings[1] == 1:
+                    allow_noti = True
+                else:
+                    allow_noti = False
+            else:
+                cursor.execute("INSERT INTO settings (theme, notifications) VALUES (?, ?)", ("Dark", True))
+                conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
         self.setting_tab = self.add("Settings")
-        
-        #Theme
-        self.theme_selector = ctk.CTkOptionMenu(master=self.setting_tab, values=theme_options, command=lambda theme: ctk.set_appearance_mode(theme))  # Change theme
-        self.theme_selector.pack(padx=20, pady=10)
-        self.theme_selector.set("System")  # Set default theme to "System"
+
+        # Settings Frame
+        self.settings_frame = ctk.CTkFrame(self.setting_tab, width=700, height=500)
+        self.settings_frame.grid(pady=(30,0))
+        self.settings_frame.grid_propagate(False)
+
+        #Theme Selector
+        self.theme_frame = ctk.CTkFrame(self.settings_frame, width=600, height=40, fg_color="#515151")
+        self.theme_frame.grid(pady=(0,20))
+        self.theme_frame.grid_propagate(False)
+        self.theme_frame.grid_columnconfigure(0, weight=1)
+        self.theme_frame.grid_columnconfigure(1, weight=1)
+        self.theme_label = ctk.CTkLabel(self.theme_frame, text="Theme", font=(None, 15, "bold"))
+        self.theme_label.grid(row=0, column=0, pady=(6,0))
+        self.theme_selector = ctk.CTkOptionMenu(self.theme_frame, values=theme_options)  # Change theme
+        self.theme_selector.grid(row=0, column=1, pady=(6,0))
+        self.theme_selector.set(theme)  # Set default theme
+
+        #Notification Switch
+        self.noti_frame = ctk.CTkFrame(self.settings_frame, width=600, height=40, fg_color="#515151")
+        self.noti_frame.grid(pady=(0, 20))
+        self.noti_frame.grid_propagate(False)
+        self.noti_frame.grid_columnconfigure(0, weight=1)
+        self.noti_frame.grid_columnconfigure(1, weight=1)
+        self.noti_label = ctk.CTkLabel(self.noti_frame, text="Notifications", font=(None, 15, "bold"))
+        self.noti_label.grid(row=0, column=0, pady=(6,0))
+        self.noti_switch = ctk.CTkSwitch(self.noti_frame, text="Enabled", variable=ctk.BooleanVar(value=True) if allow_noti == True else ctk.BooleanVar(value=False))
+        self.noti_switch.grid(row=0, column=1, pady=(6,0))
+
+        #Apply Settings Button
+        self.apply_settings_button = ctk.CTkButton(self.settings_frame, text="Apply", command=self.apply_settings)
+        self.apply_settings_button.grid(pady=(0,50))
+
+        self.apply_settings()
         
         #Debug Button
-        self.debug_button = ctk.CTkButton(master=self.setting_tab, text="Debug", command=self.open_debug_menu)
-        self.debug_button.pack(padx=20, pady=10)
+        self.debug_button = ctk.CTkButton(self.settings_frame, text="Debug", command=self.open_debug_menu)
+        self.debug_button.grid()
+
+        self.settings_frame.grid_columnconfigure(0, weight=1)
+        self.settings_frame.grid_columnconfigure(0, weight=1)
+
+        for col in range(1):
+            self.setting_tab.grid_columnconfigure(col, weight=1)
+
+        for row in range(1):
+            self.setting_tab.grid_rowconfigure(row, weight=1)
 
     def create_treeview_widgets(self):
         global app_time_update, running, point
@@ -908,6 +967,30 @@ class Tabview(ctk.CTkTabview):
         load_past_data()
         stat_update = True
 
+    def apply_settings(self):
+        global allow_noti, theme
+        theme = self.theme_selector.get()
+        ctk.set_appearance_mode(theme)
+
+        if self.noti_switch.get() == 1:
+            allow_noti = True
+        else:
+            allow_noti = False
+        self.noti_switch.configure(text="Enabled" if allow_noti else "Disabled")
+
+        try:
+            conn = sqlite3.connect('sproutime.db')
+            cursor = conn.cursor()
+
+            cursor.execute("UPDATE settings SET theme = ?, notifications = ?", (self.theme_selector.get(), allow_noti))
+            conn.commit()
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An SQL error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+
     def open_debug_menu(self):
         global debug_menu
     
@@ -1249,18 +1332,24 @@ def setup_sql():
         ''')
 
         cursor.execute('''
-                CREATE TABLE IF NOT EXISTS activity_log(
-                       date TEXT NOT NULL,
-                       timestamp TEXT NOT NULL,
-                       type INTEGER NOT NULL,
-                       app_name TEXT,
-                       time INTEGER,
-                       score_earn INTEGER,
-                       score_deduct INTEGER,
-                       new_name TEXT
+            CREATE TABLE IF NOT EXISTS activity_log(
+                date TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                type INTEGER NOT NULL,
+                app_name TEXT,
+                time INTEGER,
+                score_earn INTEGER,
+                score_deduct INTEGER,
+                new_name TEXT
             );
         ''')
-        
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS settings (
+                theme TEXT,
+                notifications BOOLEAN
+            );
+        ''') 
     except sqlite3.Error as e:
         if DEBUG: print(f"An SQL error occurred: {e}")
         conn.rollback()
@@ -1371,42 +1460,44 @@ def get_active_tab_name():
     return tabName
 
 def notify(app_name, info):
-    if appname_dict and app_name in old_name_list:
-        app_name = appname_dict[app_name]
+    global allow_noti
+    if allow_noti == True:
+        if appname_dict and app_name in old_name_list:
+            app_name = appname_dict[app_name]
+            
+        if info == "min time completed":
+            Title = f"Quest Completed for {app_name}"
+            Msg = f"Well done! You've spent enough time on {app_name}"
         
-    if info == "min time completed":
-        Title = f"Quest Completed for {app_name}"
-        Msg = f"Well done! You've spent enough time on {app_name}"
-    
-    elif info == "max time failed":
-        Title = f"Quest Failed for {app_name}"
-        Msg = f"Oh no! You've exceeded your screentime limit for {app_name}"
+        elif info == "max time failed":
+            Title = f"Quest Failed for {app_name}"
+            Msg = f"Oh no! You've exceeded your screentime limit for {app_name}"
 
-    elif info == "10 mins left":
-        Title = f"10 minutes left for {app_name}"
-        Msg = f"You are nearing your screentime limit for {app_name}"
+        elif info == "10 mins left":
+            Title = f"10 minutes left for {app_name}"
+            Msg = f"You are nearing your screentime limit for {app_name}"
 
-    if sys.platform == 'darwin':
-        applescript = f'display notification "{Msg}" with title "{Title}" sound name "Blow"'
+        if sys.platform == 'darwin':
+            applescript = f'display notification "{Msg}" with title "{Title}" sound name "Blow"'
 
-        try:
-            subprocess.run(["osascript", "-e", applescript], check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"Error sending notification: {e}")
-        except FileNotFoundError:
-            print("Error: 'osascript' command not found. Are you on macOS?")
-        
-    elif sys.platform == 'win32':      
-        noti = winotify.Notification(app_id="Sproutime",
-                title = Title,
-                msg = Msg,
-                duration = "long")
-        
-        noti.set_audio(winotify.audio.Default, loop=False)
-        noti.show()
+            try:
+                subprocess.run(["osascript", "-e", applescript], check=True)
+            except subprocess.CalledProcessError as e:
+                print(f"Error sending notification: {e}")
+            except FileNotFoundError:
+                print("Error: 'osascript' command not found. Are you on macOS?")
+            
+        elif sys.platform == 'win32':      
+            noti = winotify.Notification(app_id="Sproutime",
+                    title = Title,
+                    msg = Msg,
+                    duration = "long")
+            
+            noti.set_audio(winotify.audio.Default, loop=False)
+            noti.show()
 
 def load_past_data():
-    global app_time_update, app_dict, completed_list, failed_list, appname_dict, old_name_list, quest_list, quest_dict, detected_app
+    global app_time_update, app_dict, completed_list, failed_list, appname_dict, old_name_list, quest_list, quest_dict, detected_app, allow_noti, theme
     
     app_dict = {}
     quest_list = []
@@ -1751,7 +1842,7 @@ completed_list = []
 failed_list = []
 slider_var = ctk.IntVar(value=1)
 switch_var = ctk.StringVar(value=">")
-ignored_processes = ["", "explorer.exe", "TextInputHost.exe", "ApplicationFrameHost.exe", "Taskmgr.exe", "SearchHost.exe"]
+ignored_processes = ["", "explorer.exe", "TextInputHost.exe", "ApplicationFrameHost.exe", "Taskmgr.exe", "SearchHost.exe", "ShellExperienceHost.exe"]
 
 # Progress Tab UI
 progressbar_dict = {}
@@ -1793,7 +1884,9 @@ constant_tab_list = ["Youtube", "Reddit", "Instagram", "Facebook", "Linkedin"]
 tab_list = [tab for tab in constant_tab_list if tab not in quest_list]
 if google not in quest_list:
     tab_list.insert(0, "Any Tabs")
-theme_options = ["Light", "Dark", "System"]
+theme_options = ["Dark", "Light", "System"]
+allow_noti = True
+theme = "Dark"
 temp_quest_app = app_list[0]
 temp_quest_tab = tab_list[0]
 
