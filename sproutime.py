@@ -12,6 +12,7 @@ try:
     import json
     import os
     from pathlib import Path
+    import tkinter.filedialog as filedialog
 
     if sys.platform == 'darwin':
         import AppKit
@@ -144,7 +145,7 @@ class Tabview(ctk.CTkTabview):
         self.export_import_frame.columnconfigure((0,1), weight=1)
         
         #Import Button
-        self.import_button = ctk.CTkButton(self.export_import_frame, text="Import Quest", command=self.import_quest)
+        self.import_button = ctk.CTkButton(self.export_import_frame, text="Import Quest", command=self.upload_quest_json)
         self.import_button.grid(row=0, column=0, padx=10, sticky='w')
         
         #Export Button
@@ -156,9 +157,6 @@ class Tabview(ctk.CTkTabview):
 
     def create_score_widgets(self):
         self.activity_tab = self.add("Activity")
-
-        # Pending for removal
-        self.completed_list_TB = ctk.CTkTextbox(self.activity_tab)
 
         self.activity_nav_frame = ctk.CTkFrame(self.activity_tab, width=900, height=100)
         self.activity_nav_frame.grid(row=0)
@@ -174,7 +172,6 @@ class Tabview(ctk.CTkTabview):
             scrollbar_button_color=bg_color,
             scrollbar_button_hover_color=bg_color
         )
-
 
         self.activity_day_title = ctk.CTkLabel(self.activity_nav_frame, text=f"Today: {str(date.today())}", font=(None, 15, "bold"))
         self.activity_day_title.grid(row=0, column=0, sticky="w", pady=(0,10))
@@ -385,12 +382,12 @@ class Tabview(ctk.CTkTabview):
 
         # update image with your own image path if point >=100
         if point >= 100:
-            self.display_image(self.treeview_tab, "your_image2.jpg")
+            self.display_image(self.treeview_tab, "img/your_image2.jpg")
         else:
-            self.display_image(self.treeview_tab, "your_image1.jpg")     
+            self.display_image(self.treeview_tab, "img/your_image1.jpg")     
 
     def update_progress(self):
-        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, quest_list, detected_app, apptime_label_dict, appquest_label_dict, appname_label_dict, sort_type, appframe_dict
+        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, detected_app, apptime_label_dict, appquest_label_dict, appname_label_dict, sort_type, appframe_dict
         while running:
             if app_time_update:
                 temp_quest_data = {}
@@ -515,7 +512,7 @@ class Tabview(ctk.CTkTabview):
             sleep(update_tick)
 
     def update_quest(self):
-        global running, quest_list_update, quest_dict, quest_list, update_tick, old_name_list, appname_dict
+        global running, quest_list_update, quest_dict, update_tick, old_name_list, appname_dict
         
         while running:
             if quest_list_update:
@@ -834,7 +831,7 @@ class Tabview(ctk.CTkTabview):
         self.quest_time_label.configure(text=f"{switch_var.get()}{slider_var.get()} hour(s)")
 
     def refresh_app_list(self):
-        global quest_list, temp_quest_app, temp_quest_tab
+        global temp_quest_app, temp_quest_tab
         
         app_list = get_all_app_list()
         self.app_dropdown.configure(values=app_list)
@@ -901,9 +898,7 @@ class Tabview(ctk.CTkTabview):
                     cursor.execute("DELETE FROM activity_log WHERE app_name = ? AND type = 3", (app_name,))
             
             if (old_time != minutes) or (old_maximum != maximum):
-                cursor.execute("DELETE FROM activity_log WHERE app_name = ? AND date = ? AND type = 1", (app_name, str(date.today())))
-                cursor.execute("DELETE FROM activity_log WHERE app_name = ? AND date = ? AND type = 2", (app_name, str(date.today())))
-
+                cursor.execute("DELETE FROM activity_log WHERE app_name = ? AND date = ? AND type IN (1, 2)", (app_name, str(date.today())))
                 quest_dict[app_name] = {"maximum": max_switch.get(), "time": minutes * 60}
                 
                 if app_name in completed_list:
@@ -1025,8 +1020,54 @@ class Tabview(ctk.CTkTabview):
             self.date_error_prompt.grid(row=0, column=1, columnspan=2)
         quest_complete_update = True
         
-    def import_quest(self):
-        pass
+    def upload_quest_json(self):
+        file_path = filedialog.askopenfilename(
+            title="Select a JSON File",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+        )
+
+        if file_path:
+            try:
+                show_confirmation(title='Import Quest?', message='Warning: This is overwrite your current quest', on_yes=lambda file_path=file_path: self.import_quest(file_path))
+            except json.JSONDecodeError:
+                show_popup("Error", "Error: Invalid JSON file.")
+            except Exception as e:
+                show_popup("Error", f'An error occurred: {e}')
+    
+    def import_quest(self, file_path):
+        global quest_list_update
+        
+        with open(file_path, 'r') as file:
+            json_data = json.load(file)
+            
+            conn = sqlite3.connect('sproutime.db')
+            cursor = conn.cursor()
+            
+            try:
+                for quest in json_data:
+                    if quest['app_name'] in quest_list:
+                        cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (quest['app_name'],))
+                        old_time, old_maximum = cursor.fetchone()
+                        
+                        if (old_time != quest['time']) or (old_maximum !=  quest['maximum']):
+                            cursor.execute("DELETE FROM activity_log WHERE app_name = ? AND date = ? AND type IN (1, 2)", (quest['app_name'], str(date.today())))   
+                            if quest['app_name'] in completed_list:
+                                completed_list.remove(quest['app_name'])
+                            if quest['app_name'] in failed_list:
+                                failed_list.remove(quest['app_name'])
+                                                
+                    cursor.execute("INSERT OR REPLACE INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (quest['app_name'], quest['time'], quest['maximum']))
+                    check_quest(quest['app_name'])
+                    
+                conn.commit()
+            except sqlite3.Error as e:
+                if DEBUG: print(f"An SQL error occurred: {e}")
+                conn.rollback()
+            finally:
+                if conn:
+                    conn.close()
+            
+            quest_list_update = True
     
     def export_quest(self):
         conn = sqlite3.connect('sproutime.db')
@@ -1244,7 +1285,7 @@ class DebugMenu(ctk.CTkToplevel):
         self.drop_table_button.grid(row=3, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
     def clear_data(self, table):
-        global quest_list_update
+        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
         
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
@@ -1258,8 +1299,22 @@ class DebugMenu(ctk.CTkToplevel):
         finally:
             if conn:
                 conn.close()
+                
+        match table:
+            case 'app_time':
+                app_dict = {}
+            case 'quest':
+                quest_list = []
+                quest_dict = {}
+            case 'activity_Log':
+                completed_list = []
+                failed_list = []
+                appname_dict = {}
+                old_name_list = []
         
+        app_time_update = True
         quest_list_update = True
+        quest_complete_update = True
             
     def reset_database(self):
         global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
@@ -1309,7 +1364,7 @@ def setup_sql():
     try:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS quest (
-                app_name TEXT NOT NULL,
+                app_name TEXT UNIQUE NOT NULL,
                 time INTEGER NOT NULL,
                 maximum INTEGER NOT NULL
             );
@@ -1325,7 +1380,7 @@ def setup_sql():
         
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS streak (
-                date TEXT PRIMARY KEY, --Store as YYYY-MM-DD
+                date TEXT UNIQUE PRIMARY KEY, --Store as YYYY-MM-DD
                 quest_completed INTEGER NOT NULL,
                 quest_set INTEGER NOT NULL
             );
@@ -1390,7 +1445,7 @@ def get_active_app_name():
     return appName
 
 def get_all_app_list():
-    global quest_list, google, ignored_processes
+    global google, ignored_processes
     app_list = []
     
     if sys.platform == 'darwin':
@@ -1580,7 +1635,7 @@ def update_time():
             sleep(1)
 
 def check_quest(app_name):
-    global quest_complete_update, app_dict, quest_list, quest_dict
+    global quest_complete_update, app_dict, quest_dict
     
     if (quest_list) and (app_name in quest_list):
         task_score = determine_score()
@@ -1722,7 +1777,7 @@ def determine_score():
     return score
     
 def update_log(today):
-    global app_dict, completed_list, quest_list, failed_list
+    global app_dict, completed_list, failed_list
     conn = sqlite3.connect('sproutime.db')
     cursor = conn.cursor()
     
@@ -1739,12 +1794,7 @@ def update_log(today):
         cursor.execute("SELECT COUNT(*) FROM quest")
         quest_set = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) FROM streak WHERE date = ?", (today,))
-        if quest_set > 0: 
-            if cursor.fetchone()[0] > 0:
-                cursor.execute("UPDATE streak SET quest_completed = ?, quest_set = ? WHERE date = ?", (len(completed_list), quest_set, today))
-            else:
-                cursor.execute("INSERT INTO streak (date, quest_completed, quest_set) VALUES (?, ?, ?)", (today, len(completed_list), quest_set))
+        cursor.execute("INSERT OR REPLACE INTO streak (date, quest_completed, quest_set) VALUES (?, ?, ?)", (today, len(completed_list), quest_set))
         
         conn.commit()
         app_dict = {}
