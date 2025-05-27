@@ -343,7 +343,7 @@ class Tabview(ctk.CTkTabview):
                         result = cursor.fetchone()
                         temp_quest_data[app] = result
                 except sqlite3.Error as e:
-                    if DEBUG: print(f"An error occurred: {e}")
+                    if DEBUG: print(f"An SQL error occurred: {e}")
                     conn.rollback()
                 finally:
                     conn.close()
@@ -844,6 +844,8 @@ class Tabview(ctk.CTkTabview):
             if (old_time != minutes) or (old_maximum != maximum):
                 cursor.execute("DELETE FROM activity_log WHERE app_name = ? AND date = ? AND type = 1", (app_name, str(date.today())))
                 cursor.execute("DELETE FROM activity_log WHERE app_name = ? AND date = ? AND type = 2", (app_name, str(date.today())))
+
+                quest_dict[app_name] = {"maximum": max_switch.get(), "time": minutes * 60}
                 
                 if app_name in completed_list:
                     completed_list.remove(app_name)
@@ -865,10 +867,14 @@ class Tabview(ctk.CTkTabview):
         quest_complete_update = True
         
     def save_quest_time(self):
-        global temp_quest_app, temp_quest_tab, quest_list_update
-        maximum = 1 if switch_var.get() == '>' else 0
+        global temp_quest_app, temp_quest_tab, quest_list_update, completed_list
         minutes = slider_var.get() * 60
         name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
+        if switch_var.get() == ">":
+            maximum = 1
+        else:
+            maximum = 0
+            completed_list.append(name)
 
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
