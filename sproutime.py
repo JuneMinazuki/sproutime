@@ -1698,12 +1698,7 @@ def update_log(today):
         cursor.execute("SELECT COUNT(*) FROM quest")
         quest_set = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) FROM streak WHERE date = ?", (today,))
-        if quest_set > 0: 
-            if cursor.fetchone()[0] > 0:
-                cursor.execute("UPDATE streak SET quest_completed = ?, quest_set = ? WHERE date = ?", (len(completed_list), quest_set, today))
-            else:
-                cursor.execute("INSERT INTO streak (date, quest_completed, quest_set) VALUES (?, ?, ?)", (today, len(completed_list), quest_set))
+        cursor.execute("INSERT OR REPLACE INTO streak (date, quest_completed, quest_set) VALUES (?, ?, ?)", (today, len(completed_list), quest_set))
         
         conn.commit()
         app_dict = {}
