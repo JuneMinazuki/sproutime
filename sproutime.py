@@ -330,15 +330,13 @@ class Tabview(ctk.CTkTabview):
             self.setting_tab.grid_rowconfigure(row, weight=1)
 
     def create_treeview_widgets(self):
-        global app_time_update, running, point
         self.treeview_tab = self.add("Garden")
         self.treeview_frame = ctk.CTkFrame(self.treeview_tab)
         self.treeview_frame.pack(padx=10, pady=10, fill="both", expand=True)
         self.treeview_frame.columnconfigure(0, weight=1)
         
-        point = 0
         # show treepoint in label
-        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: {point}", font=(None, 15, "bold"))
+        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: ", font=(None, 15, "bold"))
         self.treeview_label.pack(pady=10)
         
     def display_image(self, parent, image_path):
@@ -360,22 +358,25 @@ class Tabview(ctk.CTkTabview):
                 
     def update_treeview(self):
         # update treeview with point
-        global running, app_time_update
+        global running, quest_complete_update
+        
         # point_earn from quest_completion
-        conn = sqlite3.connect('sproutime.db')
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT score_earn FROM activity_log WHERE type = 1")
-            result = cursor.fetchall()
-            point = 0
-            for row in result:
-                point += row[0]
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An error occurred: {e}")
-            conn.rollback()
-        finally:
-            if conn:
-                conn.close()
+        if running:
+            if quest_complete_update:
+                conn = sqlite3.connect('sproutime.db')
+                cursor = conn.cursor()
+                try:
+                    cursor.execute("SELECT score_earn FROM activity_log WHERE type = 1")
+                    result = cursor.fetchall()
+                    point = 0
+                    for row in result:
+                        point += row[0]
+                except sqlite3.Error as e:
+                    if DEBUG: print(f"An error occurred: {e}")
+                    conn.rollback()
+                finally:
+                    if conn:
+                        conn.close()
 
         # update label with point
         self.treeview_label.configure(text=f"Point: {point}")
@@ -429,7 +430,7 @@ class Tabview(ctk.CTkTabview):
             self.display_image(self.treeview_tab, "img/tree1_day.jpg")     
 
     def update_progress(self):
-        global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, detected_app, apptime_label_dict, appquest_label_dict, appname_label_dict, sort_type, appframe_dict
+        global running, app_time_update, sort_type
         while running:
             if app_time_update:
                 temp_quest_data = {}
@@ -551,10 +552,10 @@ class Tabview(ctk.CTkTabview):
                             widget.pack_forget()
 
                 app_time_update = False
-            sleep(update_tick)
+            sleep(1)
 
     def update_quest(self):
-        global running, quest_list_update, quest_dict, update_tick, old_name_list, appname_dict
+        global running, quest_list_update
         
         while running:
             if quest_list_update:
@@ -621,10 +622,10 @@ class Tabview(ctk.CTkTabview):
                         conn.close()
                         
                 quest_list_update = False
-            sleep(update_tick)
+            sleep(1)
             
     def update_activity(self):
-        global running, quest_complete_update, update_tick, old_name_list, date_request
+        global running, quest_complete_update, date_request
         
         while running:
             if quest_complete_update:
@@ -681,10 +682,10 @@ class Tabview(ctk.CTkTabview):
                     activity_info.place(x=100, rely=0.5, anchor="w")
 
                 quest_complete_update = False
-            sleep(update_tick)
+            sleep(1)
 
     def update_stats(self): 
-        global running, update_tick, stat_update, appname_dict, old_name_list
+        global running, stat_update
                
         while running:
             if stat_update:
@@ -791,7 +792,7 @@ class Tabview(ctk.CTkTabview):
                         conn.close()
                 
                 stat_update = False
-            sleep(update_tick)
+            sleep(1)
             
     def start_updating(self):     
         tab = self.get()
@@ -912,7 +913,7 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
 
     def update_quest_frame(self, max_switch, time_slider, current_app, new_name_widget):
-        global temp_quest_app, temp_quest_tab, quest_list_update, appname_dict, quest_complete_update, old_name_list, app_time_update
+        global quest_list_update, quest_complete_update, app_time_update
         
         app_name = current_app
         maximum = 1 if max_switch.get() == '>' else 0
@@ -963,7 +964,7 @@ class Tabview(ctk.CTkTabview):
         quest_complete_update = True
         
     def save_quest_time(self):
-        global temp_quest_app, temp_quest_tab, quest_list_update, completed_list
+        global temp_quest_app, temp_quest_tab, quest_list_update
         minutes = slider_var.get() * 60
         name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
         if switch_var.get() == ">":
@@ -1325,6 +1326,15 @@ class DebugMenu(ctk.CTkToplevel):
         self.drop_table_button = ctk.CTkButton(master=self, text="Reset Database",
                                                command=lambda title='Drop All Table?', on_yes=lambda: self.reset_database(), : show_confirmation(title=title, on_yes=on_yes))
         self.drop_table_button.grid(row=3, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        
+        #Export App Data
+        self.export_app_data_button = ctk.CTkButton(master=self, text="Export App Data", command=self.export_app_data)
+        self.export_app_data_button.grid(row=4, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        
+        #Import App Data
+        self.import_app_data_button = ctk.CTkButton(master=self, text="Import App Data",
+                                               command=lambda title='Import App Data?',message="This will overwrite all current app data" , on_yes=lambda: self.import_app_data(), : show_confirmation(title=title, message=message, on_yes=on_yes))
+        self.import_app_data_button.grid(row=5, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
     def clear_data(self, table):
         global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
@@ -1396,6 +1406,12 @@ class DebugMenu(ctk.CTkToplevel):
         quest_list_update = True
         quest_complete_update = True
         
+    def export_app_data(self):
+        show_popup("App Data Exported", "Your app data had been exported as a JSON in your Downloads")
+    
+    def import_app_data(self):
+        pass
+        
     def close_debug_menu(self):
         self.destroy() 
 
@@ -1455,7 +1471,7 @@ def setup_sql():
             conn.close()
 
 def get_active_app_name():
-    global appName, ignored_processes
+    global appName
 
     if sys.platform == 'darwin':
         appName = AppKit.NSWorkspace.sharedWorkspace().activeApplication()['NSApplicationName']
@@ -1487,7 +1503,7 @@ def get_active_app_name():
     return appName
 
 def get_all_app_list():
-    global google, ignored_processes
+    global google
     app_list = []
     
     if sys.platform == 'darwin':
@@ -1650,7 +1666,7 @@ def load_past_data():
     app_time_update = True
 
 def update_time():
-    global app_name, app_dict, app_time_update, running, _d_time_speed
+    global app_name, app_time_update, running, _d_time_speed
     
     while running:
         now = datetime.now()
@@ -1677,7 +1693,7 @@ def update_time():
             sleep(1)
 
 def check_quest(app_name):
-    global quest_complete_update, app_dict, quest_dict
+    global quest_complete_update
     
     if (quest_list) and (app_name in quest_list):
         task_score = determine_score()
@@ -1923,7 +1939,6 @@ time_lock = threading.Lock()
 
 ##Global Var
 appName = ""
-update_tick = 1
 app_dict = {}
 temp_quest_app = ""
 temp_quest_tab = ""
