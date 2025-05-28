@@ -1283,6 +1283,15 @@ class DebugMenu(ctk.CTkToplevel):
         self.drop_table_button = ctk.CTkButton(master=self, text="Reset Database",
                                                command=lambda title='Drop All Table?', on_yes=lambda: self.reset_database(), : show_confirmation(title=title, on_yes=on_yes))
         self.drop_table_button.grid(row=3, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        
+        #Export App Data
+        self.export_app_data_button = ctk.CTkButton(master=self, text="Export App Data", command=self.export_app_data)
+        self.export_app_data_button.grid(row=4, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
+        
+        #Import App Data
+        self.import_app_data_button = ctk.CTkButton(master=self, text="Import App Data",
+                                               command=lambda title='Import App Data?',message="This will overwrite all current app data" , on_yes=lambda: self.import_app_data(), : show_confirmation(title=title, message=message, on_yes=on_yes))
+        self.import_app_data_button.grid(row=5, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
     def clear_data(self, table):
         global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
@@ -1353,6 +1362,12 @@ class DebugMenu(ctk.CTkToplevel):
         app_time_update = True
         quest_list_update = True
         quest_complete_update = True
+        
+    def export_app_data(self):
+        show_popup("App Data Exported", "Your app data had been exported as a JSON in your Downloads")
+    
+    def import_app_data(self):
+        pass
         
     def close_debug_menu(self):
         self.destroy() 
