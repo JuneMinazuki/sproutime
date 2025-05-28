@@ -338,14 +338,14 @@ class Tabview(ctk.CTkTabview):
         
         point = 0
         # show treepoint in label
-        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: {point}, Image will change when point >= 100", font=(None, 15, "bold"))
+        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: {point}", font=(None, 15, "bold"))
         self.treeview_label.pack(pady=10)
         
     def display_image(self, parent, image_path):
         try:
             img = Image.open(image_path)
-            img = img.resize((450, 450), Image.Resampling.LANCZOS)
-            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(450, 450))
+            img = img.resize((750, 450), Image.Resampling.LANCZOS)
+            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(750, 450))
             label = ctk.CTkLabel(parent, image=photo, text="")
             label.image = photo  # Keep a reference!
             label.pack(pady=20)
@@ -378,13 +378,13 @@ class Tabview(ctk.CTkTabview):
                 conn.close()
 
         # update label with point
-        self.treeview_label.configure(text=f"Point: {point}, Image will change when point >= 100")
+        self.treeview_label.configure(text=f"Point: {point}")
 
         # update image with your own image path if point >=100
         if point >= 100:
             self.display_image(self.treeview_tab, "img/your_image2.jpg")
         else:
-            self.display_image(self.treeview_tab, "img/your_image1.jpg")     
+            self.display_image(self.treeview_tab, "img/tree1_day.jpg")     
 
     def update_progress(self):
         global running, app_time_update, app_dict, update_tick, appname_dict, old_name_list, progressbar_dict, detected_app, apptime_label_dict, appquest_label_dict, appname_label_dict, sort_type, appframe_dict
