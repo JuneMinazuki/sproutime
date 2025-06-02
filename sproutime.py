@@ -1142,8 +1142,8 @@ class Tabview(ctk.CTkTabview):
         file_path = os.path.join(downloads_folder, file_name)
         
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(json_string)
+            with open(file_path, 'w', encoding='utf-8') as file:
+                file.write(json_string)
             
             show_popup("Quest Exported", "Your quest had been exported as a JSON in your Downloads")
         except Exception as e:
@@ -1406,6 +1406,54 @@ class DebugMenu(ctk.CTkToplevel):
         quest_complete_update = True
         
     def export_app_data(self):
+        conn = sqlite3.connect('sproutime.db')
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            
+            database_data = {}
+            tables = cursor.fetchall()
+            table_names = [table[0] for table in tables]
+            
+            for table_name in table_names:
+                if DEBUG: print(f"Exporting data from table: {table_name}")
+                cursor.execute(f"SELECT * FROM {table_name}")
+                
+                # Get column names
+                columns = [description[0] for description in cursor.description]
+                rows = cursor.fetchall()
+
+                # Convert rows to a list of dictionaries
+                table_rows_as_dicts = []
+                for row in rows:
+                    row_dict = {}
+                    for i, col_name in enumerate(columns):
+                        row_dict[col_name] = row[i]
+                    table_rows_as_dicts.append(row_dict)
+                
+                database_data[table_name] = table_rows_as_dicts
+        except sqlite3.Error as e:
+            if DEBUG: print(f"An SQL error occurred: {e}")
+            conn.rollback()
+        finally:
+            if conn:
+                conn.close()
+        
+        home_directory = str(Path.home())
+
+        # Construct the path to the Downloads folder
+        downloads_folder = os.path.join(home_directory, "Downloads")
+        file_name = "sproutime-app-data.json"
+        file_path = os.path.join(downloads_folder, file_name)
+                
+        try:
+            with open(file_path, 'w', encoding='utf-8') as file:
+                json.dump(database_data, file, ensure_ascii=False, indent=4)
+            if DEBUG: print(f"Database successfully exported to {file_path}")
+        except Exception as e:
+            if DEBUG: print(f"Error writing JSON file: {e}")
+        
         show_popup("App Data Exported", "Your app data had been exported as a JSON in your Downloads")
     
     def import_app_data(self):
