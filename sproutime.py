@@ -51,7 +51,7 @@ class Tabview(ctk.CTkTabview):
         #Create widget
         self.create_progress_widgets()
         self.create_quest_widgets()
-        self.create_score_widgets()
+        self.create_activity_widgets()
         self.create_stats_widgets()
         self.create_setting_widgets()
         self.create_treeview_widgets()
@@ -64,13 +64,22 @@ class Tabview(ctk.CTkTabview):
         self.progress_sort_frame = ctk.CTkFrame(self.progress_tab, height=100, width=300)
         self.progress_sort_frame.grid(row=0, column=0, pady=(20,10))
 
-        self.progress_sort_button = ctk.CTkLabel(self.progress_sort_frame, text="Sort by :")
-        self.progress_sort_button.grid(row=0, column=0, padx=(0,6))
+        self.progress_search_label = ctk.CTkLabel(self.progress_sort_frame, text="Search by name:")
+        self.progress_search_label.grid(row=0, column=0, padx=(0,6))
+
+        self.progress_search_entry = ctk.CTkEntry(self.progress_sort_frame)
+        self.progress_search_entry.grid(row=0, column=1, padx=(0,40))
+
+        self.progress_sort_label = ctk.CTkLabel(self.progress_sort_frame, text="Sort by :")
+        self.progress_sort_label.grid(row=0, column=2, padx=(0,6))
 
         sort_choices = ["Oldest", "Newest", "Longest Screentime", "Shortest Screentime", "Quests"]
 
-        self.progress_sort_combobox = ctk.CTkComboBox(self.progress_sort_frame, values=sort_choices, command=self.change_sort)
-        self.progress_sort_combobox.grid(row=0, column=1)
+        self.progress_sort_combobox = ctk.CTkComboBox(self.progress_sort_frame, width=160, values=sort_choices)
+        self.progress_sort_combobox.grid(row=0, column=3, padx=(0,40))
+
+        self.progress_search_button = ctk.CTkButton(self.progress_sort_frame, text="Search", command=self.progress_search)
+        self.progress_search_button.grid(row=0, column=4)
 
         #Scrollable frame for progress bar
         self.progress_scrollable = ctk.CTkScrollableFrame(self.progress_tab, width=1080, height=500)
@@ -81,6 +90,11 @@ class Tabview(ctk.CTkTabview):
             scrollbar_button_color=bg_color,
             scrollbar_button_hover_color=bg_color
         )
+        self.progress_scrollable.grid_columnconfigure(0, weight=1)
+
+        self.no_results_label = ctk.CTkLabel(self.progress_scrollable, text="No results")
+        self.no_results_label.grid(row=0, pady=40)
+        self.no_results_label.grid_remove()
 
         for col in range(1):
             self.progress_tab.grid_columnconfigure(col, weight=1)
@@ -155,12 +169,11 @@ class Tabview(ctk.CTkTabview):
         self.refresh_app_list()
         quest_list_update = True
 
-    def create_score_widgets(self):
+    def create_activity_widgets(self):
         self.activity_tab = self.add("Activity")
 
         self.activity_nav_frame = ctk.CTkFrame(self.activity_tab, width=900, height=100)
         self.activity_nav_frame.grid(row=0)
-        self.activity_nav_frame.grid_propagate(False)
 
         self.date_error_prompt = ctk.CTkLabel(self.activity_nav_frame, text="Invalid date: Please insert a valid date (YYYY-MM-DD)", text_color="red")
 
@@ -190,6 +203,8 @@ class Tabview(ctk.CTkTabview):
         
         for col in range(1):
             self.activity_tab.columnconfigure(col, weight=1)
+
+        self.activitytab_scrollable.grid_columnconfigure(0, weight=1)
         
     def create_stats_widgets(self):
         self.stat_tab = self.add("Stats")
@@ -429,7 +444,7 @@ class Tabview(ctk.CTkTabview):
                     self.display_image(self.treeview_tab, "img/tree1_day.jpg")     
 
     def update_progress(self):
-        global running, app_time_update, sort_type
+        global running, app_time_update, sort_type, search_by_name
         while running:
             if app_time_update:
                 temp_quest_data = {}
@@ -445,6 +460,9 @@ class Tabview(ctk.CTkTabview):
                     conn.rollback()
                 finally:
                     conn.close()
+
+                for widget in self.progress_scrollable.winfo_children():
+                    widget.grid_remove()
 
                 if sort_type == "Oldest":
                     sorted_apps = list(app_dict.keys())
@@ -468,8 +486,12 @@ class Tabview(ctk.CTkTabview):
                 else:
                     sorted_apps = list(app_dict.keys())
 
-                for widget in self.progress_scrollable.winfo_children():
-                    widget.grid_remove()
+                if search_by_name:
+                    if search_by_name in sorted_apps:
+                        sorted_apps = [app for app in sorted_apps if app == search_by_name]
+                    else:
+                        sorted_apps.clear()
+                        self.no_results_label.grid()
 
                 for index, app in enumerate(sorted_apps):
                     result = temp_quest_data.get(app)
@@ -671,7 +693,7 @@ class Tabview(ctk.CTkTabview):
 
                 for time, info in activity_log_dict.items():
                     activity_frame = ctk.CTkFrame(self.activitytab_scrollable, width=700, height=40, fg_color="#515151")
-                    activity_frame.grid(pady=3, sticky="w")
+                    activity_frame.grid(pady=3)
                     activity_frame.grid_propagate(False)
 
                     activity_time = ctk.CTkLabel(activity_frame, text=time, font=(None, 15, "bold"))
@@ -844,9 +866,10 @@ class Tabview(ctk.CTkTabview):
     def tab_changed(self):
         self.start_updating()
 
-    def change_sort(self, choice):
-        global sort_type, app_time_update
-        sort_type = choice
+    def progress_search(self):
+        global sort_type, app_time_update, search_by_name
+        sort_type = self.progress_sort_combobox.get()
+        search_by_name = self.progress_search_entry.get()
         app_time_update = True
 
     def combobox_callback(self, choice):  
@@ -2057,6 +2080,7 @@ appname_label_dict = {}
 apptime_label_dict = {}
 appquest_label_dict = {}
 sort_type = "Oldest"
+search_by_name = ""
 
 # Activity Log Tab UI
 date_request = str(date.today())
