@@ -1450,11 +1450,9 @@ class DebugMenu(ctk.CTkToplevel):
         try:
             with open(file_path, 'w', encoding='utf-8') as file:
                 json.dump(database_data, file, ensure_ascii=False, indent=4)
-            if DEBUG: print(f"Database successfully exported to {file_path}")
+            show_popup("App Data Exported", "Your app data had been exported as a JSON in your Downloads")
         except Exception as e:
-            if DEBUG: print(f"Error writing JSON file: {e}")
-        
-        show_popup("App Data Exported", "Your app data had been exported as a JSON in your Downloads")
+            show_popup(f"Error writing JSON file: {e}")
     
     def import_app_data(self):
         pass
