@@ -1074,7 +1074,7 @@ class Tabview(ctk.CTkTabview):
             except json.JSONDecodeError:
                 show_popup("Error", "Error: Invalid JSON file.")
             except Exception as e:
-                show_popup("Error", f'An error occurred: {e}')
+                show_popup("Error", f"Error writing JSON file: {e}")
     
     def import_quest(self, file_path):
         global quest_list_update
@@ -1331,8 +1331,7 @@ class DebugMenu(ctk.CTkToplevel):
         self.export_app_data_button.grid(row=4, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
         
         #Import App Data
-        self.import_app_data_button = ctk.CTkButton(master=self, text="Import App Data",
-                                               command=lambda title='Import App Data?',message="This will overwrite all current app data" , on_yes=lambda: self.import_app_data(), : show_confirmation(title=title, message=message, on_yes=on_yes))
+        self.import_app_data_button = ctk.CTkButton(master=self, text="Import App Data", command=self.upload_app_data_json)
         self.import_app_data_button.grid(row=5, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
     def clear_data(self, table):
@@ -1452,10 +1451,64 @@ class DebugMenu(ctk.CTkToplevel):
                 json.dump(database_data, file, ensure_ascii=False, indent=4)
             show_popup("App Data Exported", "Your app data had been exported as a JSON in your Downloads")
         except Exception as e:
-            show_popup(f"Error writing JSON file: {e}")
+            show_popup("Error", f"Error writing JSON file: {e}")
+            
+    def upload_app_data_json(self):
+        file_path = filedialog.askopenfilename(
+            title="Select a JSON File",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+        )
+
+        if file_path:
+            try:
+                show_confirmation(title='Import App Data?', message='Warning: This might overwrite your current app data', on_yes=lambda file_path=file_path: self.import_app_data(file_path))
+            except json.JSONDecodeError:
+                show_popup("Error", "Error: Invalid JSON file.")
+            except Exception as e:
+                show_popup("Error", f"Error writing JSON file: {e}")
     
-    def import_app_data(self):
-        pass
+    def import_app_data(self, file_path):
+        global app_time_update, quest_list_update, quest_complete_update, stat_update
+        
+        with open(file_path, 'r') as file:
+            json_data = json.load(file)
+            
+            conn = sqlite3.connect('sproutime.db')
+            cursor = conn.cursor()
+            
+            try:
+                for table_name, records in json_data.items():
+                    if not records: #Skipping empty table
+                        continue
+                    
+                    columns = list(records[0].keys())
+                    
+                    #Insert data
+                    placeholders = ', '.join(['?' for _ in columns])
+                    insert_sql = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
+                    
+                    for record in records:
+                        values = [record.get(col) for col in columns] # Use .get() to handle missing keys gracefully
+                        try:
+                            cursor.execute(insert_sql, values)
+                        except sqlite3.OperationalError as op_e:
+                            show_popup(f"Error inserting into {table_name} for record {record}: {op_e}", "This often means the table or columns don't exist, or there's a data type mismatch.")
+                        except Exception as ex:
+                            show_popup("SQL Error", f"An unexpected error occurred during insertion for record {record}: {ex}")
+                conn.commit()
+            except sqlite3.Error as e:
+                if DEBUG: print(f"An SQL error occurred: {e}")
+                conn.rollback()
+            finally:
+                if conn:
+                    conn.close()
+                    
+            show_popup("App Data Import Sucessfully", "Data successfully imported into SQLite database")
+                    
+            app_time_update = True
+            quest_list_update = True
+            quest_complete_update = True
+            stat_update = True
         
     def close_debug_menu(self):
         self.destroy() 
