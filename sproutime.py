@@ -51,7 +51,7 @@ class Tabview(ctk.CTkTabview):
         #Create widget
         self.create_progress_widgets()
         self.create_quest_widgets()
-        self.create_score_widgets()
+        self.create_activity_widgets()
         self.create_stats_widgets()
         self.create_setting_widgets()
         self.create_treeview_widgets()
@@ -169,12 +169,11 @@ class Tabview(ctk.CTkTabview):
         self.refresh_app_list()
         quest_list_update = True
 
-    def create_score_widgets(self):
+    def create_activity_widgets(self):
         self.activity_tab = self.add("Activity")
 
         self.activity_nav_frame = ctk.CTkFrame(self.activity_tab, width=900, height=100)
         self.activity_nav_frame.grid(row=0)
-        self.activity_nav_frame.grid_propagate(False)
 
         self.date_error_prompt = ctk.CTkLabel(self.activity_nav_frame, text="Invalid date: Please insert a valid date (YYYY-MM-DD)", text_color="red")
 
@@ -204,6 +203,8 @@ class Tabview(ctk.CTkTabview):
         
         for col in range(1):
             self.activity_tab.columnconfigure(col, weight=1)
+
+        self.activitytab_scrollable.grid_columnconfigure(0, weight=1)
         
     def create_stats_widgets(self):
         self.stat_tab = self.add("Stats")
@@ -692,7 +693,7 @@ class Tabview(ctk.CTkTabview):
 
                 for time, info in activity_log_dict.items():
                     activity_frame = ctk.CTkFrame(self.activitytab_scrollable, width=700, height=40, fg_color="#515151")
-                    activity_frame.grid(pady=3, sticky="w")
+                    activity_frame.grid(pady=3)
                     activity_frame.grid_propagate(False)
 
                     activity_time = ctk.CTkLabel(activity_frame, text=time, font=(None, 15, "bold"))
