@@ -175,7 +175,7 @@ class Tabview(ctk.CTkTabview):
         self.activity_nav_frame = ctk.CTkFrame(self.activity_tab, width=900, height=100)
         self.activity_nav_frame.grid(row=0)
 
-        self.date_error_prompt = ctk.CTkLabel(self.activity_nav_frame, text="Invalid date: Please insert a valid date (YYYY-MM-DD)", text_color="red")
+        self.date_error_prompt = ctk.CTkLabel(self.activity_nav_frame, text="Invalid date: Please insert a valid date (YYYY-MM-DD)", text_color="red", font=(None, 13, "bold"))
 
         self.activitytab_scrollable = ctk.CTkScrollableFrame(self.activity_tab, width=900, height=500)
         self.activitytab_scrollable.grid(row=2)
@@ -274,7 +274,7 @@ class Tabview(ctk.CTkTabview):
         self.refresh_stat_button.pack(pady=20, padx=10, expand=True)
         
     def create_setting_widgets(self):
-        global allow_noti, theme
+        global allow_noti, theme, secondary_colour
         conn = sqlite3.connect('sproutime.db')
         cursor = conn.cursor()
         try:
@@ -303,7 +303,7 @@ class Tabview(ctk.CTkTabview):
         self.settings_frame.grid_propagate(False)
 
         #Theme Selector
-        self.theme_frame = ctk.CTkFrame(self.settings_frame, width=600, height=40, fg_color="#515151")
+        self.theme_frame = ctk.CTkFrame(self.settings_frame, width=600, height=40)
         self.theme_frame.grid(pady=(0,20))
         self.theme_frame.grid_propagate(False)
         self.theme_frame.grid_columnconfigure(0, weight=1)
@@ -315,7 +315,7 @@ class Tabview(ctk.CTkTabview):
         self.theme_selector.set(theme)  # Set default theme
 
         #Notification Switch
-        self.noti_frame = ctk.CTkFrame(self.settings_frame, width=600, height=40, fg_color="#515151")
+        self.noti_frame = ctk.CTkFrame(self.settings_frame, width=600, height=40)
         self.noti_frame.grid(pady=(0, 20))
         self.noti_frame.grid_propagate(False)
         self.noti_frame.grid_columnconfigure(0, weight=1)
@@ -327,13 +327,19 @@ class Tabview(ctk.CTkTabview):
 
         #Apply Settings Button
         self.apply_settings_button = ctk.CTkButton(self.settings_frame, text="Apply", command=self.apply_settings)
-        self.apply_settings_button.grid(pady=(0,50))
+        self.apply_settings_button.grid(pady=(0,20))
 
+        self.prompt_restart = ctk.CTkLabel(self.settings_frame, text="Changes saved. A restart is required to apply some settings.", text_color="red", font=(None, 13, "bold"))
+        self.prompt_restart.grid(row=3)
         self.apply_settings()
+        self.prompt_restart.grid_remove()
+        
+        self.theme_frame.configure(fg_color=secondary_colour)
+        self.noti_frame.configure(fg_color=secondary_colour)
         
         #Debug Button
         self.debug_button = ctk.CTkButton(self.settings_frame, text="Debug", command=self.open_debug_menu)
-        self.debug_button.grid()
+        self.debug_button.grid(row=4, pady=50)
 
         self.settings_frame.grid_columnconfigure(0, weight=1)
         self.settings_frame.grid_columnconfigure(0, weight=1)
@@ -444,7 +450,7 @@ class Tabview(ctk.CTkTabview):
                     self.display_image(self.treeview_tab, "img/tree1_day.jpg")     
 
     def update_progress(self):
-        global running, app_time_update, sort_type, search_by_name
+        global running, app_time_update, sort_type, search_by_name, secondary_colour
         while running:
             if app_time_update:
                 temp_quest_data = {}
@@ -528,7 +534,7 @@ class Tabview(ctk.CTkTabview):
                     if app not in detected_app:
                                 
                         #Frame for each app
-                        self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=1080, height=150, fg_color="#515151")
+                        self.progress_app_frame = ctk.CTkFrame(self.progress_scrollable, width=1080, height=150, fg_color=secondary_colour)
                         self.progress_app_frame.grid(column=0, padx=10, pady=10)
                         self.progress_app_frame.grid_propagate(False)
                         appframe_dict[app] = self.progress_app_frame
@@ -576,7 +582,7 @@ class Tabview(ctk.CTkTabview):
             sleep(1)
 
     def update_quest(self):
-        global running, quest_list_update
+        global running, quest_list_update, secondary_colour
         
         while running:
             if quest_list_update:
@@ -597,7 +603,7 @@ class Tabview(ctk.CTkTabview):
                         else:
                             app_name = app
                         
-                        quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color="#515151", width=1080, height=150)
+                        quest_box = ctk.CTkFrame(self.quest_list_frame, fg_color=secondary_colour, width=1080, height=150)
                         quest_box.pack(pady=5)
                         quest_box.grid_columnconfigure((0), weight=1)
                         quest_box.grid_propagate(False)
@@ -646,7 +652,7 @@ class Tabview(ctk.CTkTabview):
             sleep(1)
             
     def update_activity(self):
-        global running, quest_complete_update, date_request
+        global running, quest_complete_update, date_request, secondary_colour
         
         while running:
             if quest_complete_update:
@@ -692,7 +698,7 @@ class Tabview(ctk.CTkTabview):
                     widget.grid_forget()
 
                 for time, info in activity_log_dict.items():
-                    activity_frame = ctk.CTkFrame(self.activitytab_scrollable, width=700, height=40, fg_color="#515151")
+                    activity_frame = ctk.CTkFrame(self.activitytab_scrollable, width=700, height=40, fg_color=secondary_colour)
                     activity_frame.grid(pady=3)
                     activity_frame.grid_propagate(False)
 
@@ -1028,10 +1034,15 @@ class Tabview(ctk.CTkTabview):
         stat_update = True
 
     def apply_settings(self):
-        global allow_noti, theme
+        global allow_noti, theme, secondary_colour
         theme = self.theme_selector.get()
         ctk.set_appearance_mode(theme)
+        current_theme = ctk.get_appearance_mode().lower()
 
+        if current_theme == "dark":
+            secondary_colour = "#515151"
+        else:
+            secondary_colour = "#979da2"
         if self.noti_switch.get() == 1:
             allow_noti = True
         else:
@@ -1050,6 +1061,8 @@ class Tabview(ctk.CTkTabview):
         finally:
             if conn:
                 conn.close()
+        
+        self.prompt_restart.grid()
 
     def open_debug_menu(self):
         global debug_menu
@@ -2116,6 +2129,7 @@ if google not in quest_list:
 theme_options = ["Dark", "Light", "System"]
 allow_noti = True
 theme = "Dark"
+secondary_colour = "#515151"
 temp_quest_app = app_list[0]
 temp_quest_tab = tab_list[0]
 
