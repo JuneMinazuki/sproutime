@@ -406,48 +406,21 @@ class Tabview(ctk.CTkTabview):
                 # Get the current appearance mode as "dark" or "light"
                 current_theme = ctk.get_appearance_mode().lower()
                 
-                # update image with your own image path if point >=100
-                if point >= 100 and current_theme == "dark":
-                    self.display_image(self.treeview_tab, "img/tree2_night.jpg")
+                # update image with your own image path
+                if current_theme == "dark":
+                    if point < 700:
+                        self.display_image(self.treeview_tab, f"img/tree{point // 100}_night.jpg")
+                    else:
+                        self.display_image(self.treeview_tab, "img/tree6_night.jpg")
+                        
+                elif current_theme == "light":
+                    if point < 700:
+                        self.display_image(self.treeview_tab, f"img/tree{point // 100}_day.jpg")
+                    else:
+                        self.display_image(self.treeview_tab, "img/tree6_day.jpg")
 
-                elif point >= 100 and current_theme == "light":
-                    self.display_image(self.treeview_tab, "img/tree2_day.jpg")
 
-                elif point >= 200 and current_theme == "dark":
-                    self.display_image(self.treeview_tab, "img/tree3_night.jpg")
-                    
-                elif point >= 200 and current_theme == "light":
-                    self.display_image(self.treeview_tab, "img/tree3_day.jpg")
 
-                elif point >= 300 and current_theme == "dark":
-                    self.display_image(self.treeview_tab, "img/tree4_night.jpg")
-                    
-                elif point >= 300 and current_theme == "light":
-                    self.display_image(self.treeview_tab, "img/tree4_day.jpg")
-
-                elif point >= 400 and current_theme == "dark":
-                    self.display_image(self.treeview_tab, "img/tree5_night.jpg")
-
-                elif point >= 400 and current_theme == "light":
-                    self.display_image(self.treeview_tab, "img/tree5_day.jpg")
-
-                elif point >= 500 and current_theme == "dark":
-                    self.display_image(self.treeview_tab, "img/tree6_night.jpg")
-
-                elif point >= 500 and current_theme == "light":
-                    self.display_image(self.treeview_tab, "img/tree6_day.jpg")
-
-                elif point >= 600 and current_theme == "dark":
-                    self.display_image(self.treeview_tab, "img/tree7_night.jpg")
-                    
-                elif point >= 600 and current_theme == "light":
-                    self.display_image(self.treeview_tab, "img/tree7_day.jpg")
-
-                elif point < 100 and current_theme == "dark":
-                    self.display_image(self.treeview_tab, "img/tree1_night.jpg")
-
-                else:
-                    self.display_image(self.treeview_tab, "img/tree1_day.jpg")     
 
     def update_progress(self):
         global running, app_time_update, sort_type, search_by_name, secondary_colour
