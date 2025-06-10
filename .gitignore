@@ -2,3 +2,9 @@
 *.db
 *.pyc
 *.txt
+.venv
+*.spec
+build
+dist
+database
+*.icns
