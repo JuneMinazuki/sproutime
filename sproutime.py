@@ -1665,7 +1665,7 @@ def get_all_app_list():
         
         for app in running_app:
             launch_date = app.launchDate()
-            if not app.isHidden() and launch_date:
+            if (not app.isHidden() and launch_date) or (not app.localizedName() == "Sproutime"):
                 app_list.append(app.localizedName())
                 
     elif sys.platform == 'win32':
