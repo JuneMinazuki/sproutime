@@ -1087,7 +1087,7 @@ class Tabview(ctk.CTkTabview):
                 show_popup("Error", f"Error writing JSON file: {e}")
     
     def import_quest(self, file_path):
-        global quest_list_update
+        global quest_list_update, quest_list, quest_dict
         
         with open(file_path, 'r') as file:
             json_data = json.load(file)
@@ -1109,11 +1109,22 @@ class Tabview(ctk.CTkTabview):
                                 failed_list.remove(quest['app_name'])
                                                 
                     cursor.execute("INSERT OR REPLACE INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (quest['app_name'], quest['time'], quest['maximum']))
-                    if quest not in quest_list:
-                        quest_list.append(quest)
                     check_quest(quest['app_name'])
                     
                 conn.commit()
+                
+                quest_list = []
+                quest_dict = {}
+                
+                cursor.execute("SELECT app_name, maximum, time FROM quest")
+                quests = cursor.fetchall()
+                
+                for app, sign, time in quests:
+                    maximum = ">" if sign == 1 else "<"
+                    
+                    quest_list.append(app)
+                    quest_dict[app] = {"maximum": maximum, "time": time * 60}
+                    
             except sqlite3.Error as e:
                 if DEBUG: print(f"An SQL error occurred: {e}")
                 conn.rollback()
