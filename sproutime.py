@@ -1092,7 +1092,7 @@ class Tabview(ctk.CTkTabview):
                 show_popup("Error", f"Error writing JSON file: {e}")
     
     def import_quest(self, file_path):
-        global quest_list_update
+        global quest_list_update, quest_list, quest_dict
         
         with open(file_path, 'r') as file:
             json_data = json.load(file)
@@ -1117,6 +1117,19 @@ class Tabview(ctk.CTkTabview):
                     check_quest(quest['app_name'])
                     
                 conn.commit()
+                
+                quest_list = []
+                quest_dict = {}
+                
+                cursor.execute("SELECT app_name, maximum, time FROM quest")
+                quests = cursor.fetchall()
+                
+                for app, sign, time in quests:
+                    maximum = ">" if sign == 1 else "<"
+                    
+                    quest_list.append(app)
+                    quest_dict[app] = {"maximum": maximum, "time": time * 60}
+                    
             except sqlite3.Error as e:
                 if DEBUG: print(f"An SQL error occurred: {e}")
                 conn.rollback()
@@ -1676,7 +1689,7 @@ def get_all_app_list():
         
         for app in running_app:
             launch_date = app.launchDate()
-            if not app.isHidden() and launch_date:
+            if (not app.isHidden() and launch_date) and (not app.localizedName() == "Sproutime"):
                 app_list.append(app.localizedName())
                 
     elif sys.platform == 'win32':
