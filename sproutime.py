@@ -897,13 +897,14 @@ class Tabview(ctk.CTkTabview):
         self.tabBox.set(value=temp_quest_tab)
     
     def delete_quest(self, app_name):
-        global quest_list_update
+        global quest_list_update, quest_complete_update, treeview_update
         
         conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         
         try:
             cursor.execute("DELETE FROM quest WHERE app_name = ?", (app_name,))
+            cursor.execute("DELETE FROM activity_log WHERE app_name = ?", (app_name,))
             conn.commit()
         except sqlite3.Error as e:
             if DEBUG: print(f"An SQL error occurred: {e}")
@@ -914,8 +915,11 @@ class Tabview(ctk.CTkTabview):
         
         quest_list.remove(app_name)
         self.refresh_app_list()
+        progressbar_dict[app_name].set(0)
         
         quest_list_update = True
+        quest_complete_update = True
+        treeview_update = True
 
     def update_quest_frame(self, max_switch, time_slider, current_app, new_name_widget):
         global quest_list_update, quest_complete_update, app_time_update, treeview_update
