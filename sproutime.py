@@ -380,18 +380,18 @@ class Tabview(ctk.CTkTabview):
                 
     def update_treeview(self):
         # update treeview with point
-        global running, quest_complete_update
+        global running, treeview_update
         
         # point_earn from quest_completion
         if running:
-            if quest_complete_update:
+            if treeview_update:
                 conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
                 cursor = conn.cursor()
                 try:
                     cursor.execute("SELECT score_earn FROM activity_log WHERE type = 1")
-                    result = cursor.fetchall()
+                    result_earn = cursor.fetchall()
                     point = 0
-                    for row in result:
+                    for row in result_earn:
                         point += row[0]
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An error occurred: {e}")
@@ -419,6 +419,8 @@ class Tabview(ctk.CTkTabview):
                         self.display_image(self.treeview_tab, resource_path(os.path.join("img", f"tree{point // 100}_day.jpg")))
                     else:
                         self.display_image(self.treeview_tab, resource_path(os.path.join("img", "tree6_day.jpg")))
+
+                treeview_update = False
 
     def update_progress(self):
         global running, app_time_update, sort_type, search_by_name, secondary_colour
@@ -912,7 +914,7 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
 
     def update_quest_frame(self, max_switch, time_slider, current_app, new_name_widget):
-        global quest_list_update, quest_complete_update, app_time_update
+        global quest_list_update, quest_complete_update, app_time_update, treeview_update
         
         app_name = current_app
         maximum = 1 if max_switch.get() == '>' else 0
@@ -961,9 +963,10 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
         app_time_update = True
         quest_complete_update = True
+        treeview_update = True
         
     def save_quest_time(self):
-        global temp_quest_app, temp_quest_tab, quest_list_update
+        global temp_quest_app, temp_quest_tab, quest_list_update, quest_complete_update, app_time_update, treeview_update
         minutes = slider_var.get() * 60
         name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
         if switch_var.get() == ">":
@@ -1342,7 +1345,7 @@ class DebugMenu(ctk.CTkToplevel):
         self.import_app_data_button.grid(row=5, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
     def clear_data(self, table):
-        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
+        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list, treeview_update
         
         conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
@@ -1372,9 +1375,10 @@ class DebugMenu(ctk.CTkToplevel):
         app_time_update = True
         quest_list_update = True
         quest_complete_update = True
+        treeview_update = True
             
     def reset_database(self):
-        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
+        global treeview_update, app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
         
         conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
@@ -1410,6 +1414,7 @@ class DebugMenu(ctk.CTkToplevel):
         app_time_update = True
         quest_list_update = True
         quest_complete_update = True
+        treeview_update = True
         
     def export_app_data(self):
         conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
@@ -1475,7 +1480,7 @@ class DebugMenu(ctk.CTkToplevel):
                 show_popup("Error", f"Error writing JSON file: {e}")
     
     def import_app_data(self, file_path):
-        global app_time_update, quest_list_update, quest_complete_update, stat_update
+        global app_time_update, quest_list_update, quest_complete_update, stat_update, treeview_update
         
         with open(file_path, 'r') as file:
             json_data = json.load(file)
@@ -1516,6 +1521,7 @@ class DebugMenu(ctk.CTkToplevel):
             quest_list_update = True
             quest_complete_update = True
             stat_update = True
+            treeview_update = True
         
     def close_debug_menu(self):
         self.destroy() 
@@ -1847,7 +1853,7 @@ def update_time():
             sleep(1)
 
 def check_quest(app_name):
-    global quest_complete_update
+    global quest_complete_update, treeview_update
     
     if (quest_list) and (app_name in quest_list):
         task_score = determine_score()
@@ -1859,10 +1865,9 @@ def check_quest(app_name):
                     cursor = conn.cursor()
                     
                     try:
-                        cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
+                        cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
                         quest = cursor.fetchone()
                         quest_time = quest[0]
-                        maximum = quest[1]
                         current_time = datetime.now().strftime("%H:%M:%S")
                         
                         cursor.execute("SELECT COUNT(*) FROM activity_log WHERE app_name = ? AND date = ? AND type = 1", (app_name, str(date.today())))
@@ -1903,8 +1908,6 @@ def check_quest(app_name):
                             conn.close()
                     
                     notify(app_name, "max time failed")
-
-                quest_complete_update = True
             
             # 10 mins left till quest failed
             elif ((quest_dict[app_name]["time"] - 600) == app_dict[app_name]) and (quest_dict[app_name]["maximum"] == "<"):
@@ -1953,6 +1956,8 @@ def check_quest(app_name):
                     conn.close()
                 
             completed_list.append(app_name)
+        quest_complete_update = True
+        treeview_update = True
 
 def determine_score():
     conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
@@ -1983,7 +1988,7 @@ def determine_score():
         score = 100
     
     #Streak Multiplier
-    multiplier = 1 + ((current_streak // 7) + 1) * 0.1
+    multiplier = 1 + (current_streak // 7) * 0.1
     score = math.floor(score * multiplier)
 
     return score
@@ -2103,7 +2108,7 @@ completed_list = []
 failed_list = []
 slider_var = ctk.IntVar(value=1)
 switch_var = ctk.StringVar(value=">")
-ignored_processes = ["", "explorer.exe", "TextInputHost.exe", "ApplicationFrameHost.exe", "Taskmgr.exe", "SearchHost.exe", "ShellExperienceHost.exe"]
+ignored_processes = ["","Sproutime.exe", "explorer.exe", "TextInputHost.exe", "ApplicationFrameHost.exe", "Taskmgr.exe", "SearchHost.exe", "ShellExperienceHost.exe"]
 
 # Progress Tab UI
 progressbar_dict = {}
@@ -2136,6 +2141,7 @@ app_time_update = True
 quest_list_update = True
 quest_complete_update = True
 stat_update = True
+treeview_update = True
 
 #First load
 running = True
