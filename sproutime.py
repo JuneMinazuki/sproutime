@@ -1109,6 +1109,8 @@ class Tabview(ctk.CTkTabview):
                                 failed_list.remove(quest['app_name'])
                                                 
                     cursor.execute("INSERT OR REPLACE INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (quest['app_name'], quest['time'], quest['maximum']))
+                    if quest not in quest_list:
+                        quest_list.append(quest)
                     check_quest(quest['app_name'])
                     
                 conn.commit()
