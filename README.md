@@ -1,4 +1,4 @@
-<img width="1237" alt="Screenshot 2025-06-11 at 10 17 35 PM" src="https://github.com/user-attachments/assets/16f93623-6b4b-423c-9bd2-a9d9c46e17d7" /># sproutime
+# sproutime
 A desktop application that tracks application screen time, allows users to set usage goals, and rewards them upon completion.
 
 Traditional app usage limiting solutions often focus solely on restrictions without offering positive reinforcement; our app provides an innovative solution by integrating both.
@@ -46,3 +46,4 @@ pyinstaller --windowed --name Sproutime --add-data img:img --add-data database/s
 <img width="1191" alt="Screenshot 2025-06-11 at 10 14 47 PM" src="https://github.com/user-attachments/assets/0ae4a934-ab9b-46a1-a8ed-0cb8985a3c1a" />
 <img width="1181" alt="Screenshot 2025-06-11 at 10 15 46 PM" src="https://github.com/user-attachments/assets/c1d32c06-eebe-464f-b775-3b5d0674e9a1" />
 <img width="1182" alt="Screenshot 2025-06-11 at 10 16 26 PM" src="https://github.com/user-attachments/assets/ef6603ea-f906-4712-9fe5-57c2030a10da" />
+<img width="1237" alt="Screenshot 2025-06-11 at 10 17 35 PM" src="https://github.com/user-attachments/assets/16f93623-6b4b-423c-9bd2-a9d9c46e17d7" />
