@@ -358,7 +358,7 @@ class Tabview(ctk.CTkTabview):
         self.treeview_frame.columnconfigure(0, weight=1)
         
         # show treepoint in label
-        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: ", font=(None, 15, "bold"))
+        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Points: ", font=(None, 15, "bold"))
         self.treeview_label.pack(pady=10)
         
     def display_image(self, parent, image_path):
@@ -1125,8 +1125,11 @@ class Tabview(ctk.CTkTabview):
                 quests = cursor.fetchall()
                 
                 for app, sign, time in quests:
-                    maximum = ">" if sign == 1 else "<"
-                    
+                    if sign == 1:
+                        maximum = ">" 
+                    else:
+                        maximum = "<"
+                        completed_list.append(app)
                     quest_list.append(app)
                     quest_dict[app] = {"maximum": maximum, "time": time * 60}
                     
