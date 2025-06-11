@@ -30,6 +30,21 @@ pip install pyinstaller
 pyinstaller --windowed --name Sproutime --add-data img:img --add-data database/sproutime.db:database sproutime.py
 ```
 
+## 🪟 Installation for Windows
+1. Install pyinstaller
+```
+pip install pyinstaller
+```
+
+2. Download the 'sproutime.py' and 'img' folder
+
+3. Run the following line in your terminal
+```
+pyinstaller --windowed --name Sproutime --add-data img:img --add-data database/sproutime.db:database sproutime.py
+```
+pyinstaller --onefile --windowed --name Sproutime --add-data "img;img" sproutime.py
+```
+
 ## 💡 Usage
 **Basic workflow:** Our app helps you manage screen time positively by letting you set **daily quests** for specific applications. It **automatically tracks usage** in the background, shows your progress, **notifies** you when quests are complete, and visually represents your achievements through **tree growth**. You can also easily **import and export** your quest and app data.
 
