@@ -9,3 +9,4 @@ dist
 database
 *.icns
 *.ico
+.DS_Store
