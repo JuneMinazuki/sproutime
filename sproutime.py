@@ -358,7 +358,7 @@ class Tabview(ctk.CTkTabview):
         self.treeview_frame.columnconfigure(0, weight=1)
         
         # show treepoint in label
-        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: ", font=(None, 15, "bold"))
+        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Points: ", font=(None, 15, "bold"))
         self.treeview_label.pack(pady=10)
         
     def display_image(self, parent, image_path):
@@ -884,7 +884,11 @@ class Tabview(ctk.CTkTabview):
         tab_list = [tab for tab in constant_tab_list if tab not in quest_list]
         self.tabBox.configure(values=tab_list)
         
-        temp_quest_app = app_list[0]
+        if app_list:
+            temp_quest_app = app_list[0]
+        else:
+            temp_quest_app = ""
+
         temp_quest_tab = tab_list[0]
         
         self.check_for_chrome()
@@ -893,13 +897,14 @@ class Tabview(ctk.CTkTabview):
         self.tabBox.set(value=temp_quest_tab)
     
     def delete_quest(self, app_name):
-        global quest_list_update
+        global quest_list_update, quest_complete_update, treeview_update
         
         conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         
         try:
             cursor.execute("DELETE FROM quest WHERE app_name = ?", (app_name,))
+            cursor.execute("DELETE FROM activity_log WHERE app_name = ?", (app_name,))
             conn.commit()
         except sqlite3.Error as e:
             if DEBUG: print(f"An SQL error occurred: {e}")
@@ -910,8 +915,11 @@ class Tabview(ctk.CTkTabview):
         
         quest_list.remove(app_name)
         self.refresh_app_list()
+        progressbar_dict[app_name].set(0)
         
         quest_list_update = True
+        quest_complete_update = True
+        treeview_update = True
 
     def update_quest_frame(self, max_switch, time_slider, current_app, new_name_widget):
         global quest_list_update, quest_complete_update, app_time_update, treeview_update
@@ -967,39 +975,40 @@ class Tabview(ctk.CTkTabview):
         
     def save_quest_time(self):
         global temp_quest_app, temp_quest_tab, quest_list_update, quest_complete_update, app_time_update, treeview_update
-        minutes = slider_var.get() * 60
-        name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
-        if switch_var.get() == ">":
-            maximum = 1
-        else:
-            maximum = 0
-            completed_list.append(name)
+        if temp_quest_app:
+            minutes = slider_var.get() * 60
+            name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
+            if switch_var.get() == ">":
+                maximum = 1
+            else:
+                maximum = 0
+                completed_list.append(name)
 
-        conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
-        cursor = conn.cursor()
-        
-        try:
-            cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (name, minutes, maximum))
-            conn.commit()
+            conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
+            cursor = conn.cursor()
             
-            quest_list.append(name)
-            quest_dict[name] = {"maximum": switch_var.get(), "time": minutes * 60}
-            
-            #Check if quest is completed today
-            cursor.execute("DELETE FROM activity_log WHERE date = ? AND app_name = ? AND type = 1", (str(date.today()), name))
-            conn.commit()
+            try:
+                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (name, minutes, maximum))
+                conn.commit()
+                
+                quest_list.append(name)
+                quest_dict[name] = {"maximum": switch_var.get(), "time": minutes * 60}
+                
+                #Check if quest is completed today
+                cursor.execute("DELETE FROM activity_log WHERE date = ? AND app_name = ? AND type = 1", (str(date.today()), name))
+                conn.commit()
 
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An SQL error occurred: {e}")
-            conn.rollback()
-        finally:
-            if conn:
-                conn.close()
-            
-        check_quest(app_name)
-        self.refresh_app_list()
+            except sqlite3.Error as e:
+                if DEBUG: print(f"An SQL error occurred: {e}")
+                conn.rollback()
+            finally:
+                if conn:
+                    conn.close()
+                
+            check_quest(app_name)
+            self.refresh_app_list()
 
-        quest_list_update = True
+            quest_list_update = True
         
     def refresh_stat(self):
         global stat_update
@@ -1120,8 +1129,11 @@ class Tabview(ctk.CTkTabview):
                 quests = cursor.fetchall()
                 
                 for app, sign, time in quests:
-                    maximum = ">" if sign == 1 else "<"
-                    
+                    if sign == 1:
+                        maximum = ">" 
+                    else:
+                        maximum = "<"
+                        completed_list.append(app)
                     quest_list.append(app)
                     quest_dict[app] = {"maximum": maximum, "time": time * 60}
                     
@@ -1696,7 +1708,7 @@ def get_all_app_list():
 
                 if foundPID == pid and win32gui.IsWindowVisible(handle):
                     process_name = process.info["name"]
-                    if process_name not in ignored_processes:
+                    if (process_name not in ignored_processes) and (process_name != "Sproutime.exe"):
                         app_name = process_name.split(".")[0].capitalize() # Get all active app name
                         if app_name not in app_list:
                             app_list.append(app_name)
@@ -2121,7 +2133,7 @@ completed_list = []
 failed_list = []
 slider_var = ctk.IntVar(value=1)
 switch_var = ctk.StringVar(value=">")
-ignored_processes = ["","Sproutime.exe", "explorer.exe", "TextInputHost.exe", "ApplicationFrameHost.exe", "Taskmgr.exe", "SearchHost.exe", "ShellExperienceHost.exe"]
+ignored_processes = ["", "explorer.exe", "TextInputHost.exe", "ApplicationFrameHost.exe", "Taskmgr.exe", "SearchHost.exe", "ShellExperienceHost.exe"]
 
 # Progress Tab UI
 progressbar_dict = {}
@@ -2169,7 +2181,10 @@ theme_options = ["Dark", "Light", "System"]
 allow_noti = True
 theme = "Dark"
 secondary_colour = "#515151"
-temp_quest_app = app_list[0]
+if app_list:
+    temp_quest_app = app_list[0]
+else:
+    temp_quest_app = ""
 temp_quest_tab = tab_list[0]
 
 p1 = threading.Thread(target=update_time)
