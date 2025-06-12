@@ -330,7 +330,7 @@ class Tabview(ctk.CTkTabview):
         self.apply_settings_button = ctk.CTkButton(self.settings_frame, text="Apply", command=self.apply_settings)
         self.apply_settings_button.grid(pady=(0,20))
 
-        self.prompt_restart = ctk.CTkLabel(self.settings_frame, text="Changes saved. A restart is required to apply some settings.", text_color="red", font=(None, 13, "bold"))
+        self.prompt_restart = ctk.CTkLabel(self.settings_frame, text="Changes saved. A restart is recommended to fully apply the settings.", text_color="red", font=(None, 13, "bold"))
         self.prompt_restart.grid(row=3)
         self.apply_settings()
         self.prompt_restart.grid_remove()
@@ -466,8 +466,15 @@ class Tabview(ctk.CTkTabview):
                     sorted_apps = list(app_dict.keys())
 
                 if search_by_name:
+                    if search_by_name in appname_dict.values():
+                        search_by_name = next((k for k, v in appname_dict.items() if v == search_by_name), None)
+
                     if search_by_name in sorted_apps:
-                        sorted_apps = [app for app in sorted_apps if app == search_by_name]
+                        filtered_apps = []
+                        for app in sorted_apps:
+                            if app == search_by_name:
+                                filtered_apps.append(app)
+                        sorted_apps = filtered_apps
                     else:
                         sorted_apps.clear()
                         self.no_results_label.grid()
@@ -1026,6 +1033,12 @@ class Tabview(ctk.CTkTabview):
             secondary_colour = "#515151"
         else:
             secondary_colour = "#979da2"
+        self.theme_frame.configure(fg_color=secondary_colour)
+        self.noti_frame.configure(fg_color=secondary_colour)
+
+        for widget in self.progress_scrollable.winfo_children():
+            widget.configure(fg_color=secondary_colour)
+
         if self.noti_switch.get() == 1:
             allow_noti = True
         else:
