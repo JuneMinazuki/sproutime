@@ -361,7 +361,7 @@ class Tabview(ctk.CTkTabview):
             self.setting_tab.grid_rowconfigure(row, weight=1)
 
         #Restart Button
-        self.restart_button = ctk.CTkButton(self.settings_frame, text="Restart Program", command=self.restart_program)
+        self.restart_button = ctk.CTkButton(self.settings_frame, text="Restart", command=self.restart_program)
         self.restart_button.grid(row=5, pady=50)
 
     def create_treeview_widgets(self):
@@ -370,13 +370,13 @@ class Tabview(ctk.CTkTabview):
         self.treeview_frame.pack(padx=10, pady=10, fill="both", expand=True)
         self.treeview_frame.columnconfigure(0, weight=1)
         
+        # show current_time
+        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text=f"Current Time: ", font=(None, 15, "bold"))
+        self.current_time_label.pack(pady=10)
+
         # show treepoint in label
         self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: ", font=(None, 15, "bold"))
-        self.treeview_label.pack(pady=10)
-
-        # show current_time
-        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text=f"Current Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", font=(None, 15, "bold"))
-        self.current_time_label.pack(pady=10)
+        self.treeview_label.pack(pady=10)        
         
     def display_image(self, parent, image_path):
         """Display an image in the specified parent widget."""
@@ -439,9 +439,11 @@ class Tabview(ctk.CTkTabview):
                         self.display_image(self.treeview_tab, "img/tree6_day.jpg")
 
         
+        # Update current time every second
         while running:
             if quest_complete_update:
                 self.update_timelabel()
+        sleep(1)
             
 
     def update_timelabel(self):
