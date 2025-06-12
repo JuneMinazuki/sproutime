@@ -1,3 +1,4 @@
+import subprocess
 import sys
 import math
 
@@ -272,6 +273,15 @@ class Tabview(ctk.CTkTabview):
         #Refresh Button
         self.refresh_stat_button = ctk.CTkButton(self.stat_tab, text="Refresh", command=self.refresh_stat, width=200)
         self.refresh_stat_button.pack(pady=20, padx=10, expand=True)
+
+    def restart_program(self):
+        """Restart the current program."""
+        if sys.platform == 'darwin':
+            subprocess.Popen(['open', '-n', '-a', 'Sproutime.app'])
+        elif sys.platform == 'win32':
+            subprocess.Popen([sys.executable, __file__])
+        self.destroy()
+        os._exit(0)
         
     def create_setting_widgets(self):
         global allow_noti, theme, secondary_colour
@@ -349,6 +359,10 @@ class Tabview(ctk.CTkTabview):
 
         for row in range(1):
             self.setting_tab.grid_rowconfigure(row, weight=1)
+
+        #Restart Button
+        self.restart_button = ctk.CTkButton(self.settings_frame, text="Restart Program", command=self.restart_program)
+        self.restart_button.grid(row=5, pady=50)
 
     def create_treeview_widgets(self):
         self.treeview_tab = self.add("Garden")
