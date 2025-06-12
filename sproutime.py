@@ -349,7 +349,7 @@ class Tabview(ctk.CTkTabview):
         
         #Debug Button
         self.debug_button = ctk.CTkButton(self.settings_frame, text="Debug", command=self.open_debug_menu)
-        self.debug_button.grid(row=4, pady=50)
+        self.debug_button.grid(row=5, pady=50)
 
         self.settings_frame.grid_columnconfigure(0, weight=1)
         self.settings_frame.grid_columnconfigure(0, weight=1)
@@ -362,7 +362,7 @@ class Tabview(ctk.CTkTabview):
 
         #Restart Button
         self.restart_button = ctk.CTkButton(self.settings_frame, text="Restart", command=self.restart_program)
-        self.restart_button.grid(row=5, pady=50)
+        self.restart_button.grid(row=4, pady=50)
 
     def create_treeview_widgets(self):
         self.treeview_tab = self.add("Garden")
