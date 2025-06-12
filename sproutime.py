@@ -14,6 +14,7 @@ try:
     import os
     from pathlib import Path
     import tkinter.filedialog as filedialog
+    import shutil
 
     if sys.platform == 'darwin':
         import AppKit
@@ -285,7 +286,7 @@ class Tabview(ctk.CTkTabview):
         
     def create_setting_widgets(self):
         global allow_noti, theme, secondary_colour
-        conn = sqlite3.connect('sproutime.db')
+        conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         try:
             cursor.execute("SELECT * FROM settings")
@@ -339,7 +340,7 @@ class Tabview(ctk.CTkTabview):
         self.apply_settings_button = ctk.CTkButton(self.settings_frame, text="Apply", command=self.apply_settings)
         self.apply_settings_button.grid(pady=(0,20))
 
-        self.prompt_restart = ctk.CTkLabel(self.settings_frame, text="Changes saved. A restart is required to apply some settings.", text_color="red", font=(None, 13, "bold"))
+        self.prompt_restart = ctk.CTkLabel(self.settings_frame, text="Changes saved. A restart is recommended to fully apply the settings.", text_color="red", font=(None, 13, "bold"))
         self.prompt_restart.grid(row=3)
         self.apply_settings()
         self.prompt_restart.grid_remove()
@@ -399,18 +400,18 @@ class Tabview(ctk.CTkTabview):
                 
     def update_treeview(self):
         # update treeview with point
-        global running, quest_complete_update, secondary_colour
+        global running, quest_complete_update, secondary_colour, treeview_update
         
         # point_earn from quest_completion
         if running:
-            if quest_complete_update:
-                conn = sqlite3.connect('sproutime.db')
+            if treeview_update:
+                conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
                 cursor = conn.cursor()
                 try:
                     cursor.execute("SELECT score_earn FROM activity_log WHERE type = 1")
-                    result = cursor.fetchall()
+                    result_earn = cursor.fetchall()
                     point = 0
-                    for row in result:
+                    for row in result_earn:
                         point += row[0]
                 except sqlite3.Error as e:
                     if DEBUG: print(f"An error occurred: {e}")
@@ -426,21 +427,19 @@ class Tabview(ctk.CTkTabview):
                 current_theme = ctk.get_appearance_mode().lower()
                 
                 # update image with your own image path
-
-                # dark mode
                 if current_theme == "dark":
                     if point < 700:
-                        self.display_image(self.treeview_tab, f"img/tree{point // 100}_night.jpg")
+                        self.display_image(self.treeview_tab, resource_path(os.path.join("img", f"tree{point // 100}_night.jpg")))
                     else:
-                        self.display_image(self.treeview_tab, "img/tree6_night.jpg")
-
-                # light mode                        
+                        self.display_image(self.treeview_tab, resource_path(os.path.join("img", "tree6_night.jpg")))
+                        
                 elif current_theme == "light":
                     if point < 700:
-                        self.display_image(self.treeview_tab, f"img/tree{point // 100}_day.jpg")
+                        self.display_image(self.treeview_tab, resource_path(os.path.join("img", f"tree{point // 100}_day.jpg")))
                     else:
-                        self.display_image(self.treeview_tab, "img/tree6_day.jpg")
+                        self.display_image(self.treeview_tab, resource_path(os.path.join("img", "tree6_day.jpg")))
 
+                treeview_update = False
 
             # Update label
             if quest_complete_update:
@@ -451,13 +450,12 @@ class Tabview(ctk.CTkTabview):
         
 
 
-
     def update_progress(self):
         global running, app_time_update, sort_type, search_by_name, secondary_colour
         while running:
             if app_time_update:
                 temp_quest_data = {}
-                conn = sqlite3.connect('sproutime.db')
+                conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
                 cursor = conn.cursor()
                 try:
                     for app in app_dict:
@@ -496,8 +494,15 @@ class Tabview(ctk.CTkTabview):
                     sorted_apps = list(app_dict.keys())
 
                 if search_by_name:
+                    if search_by_name in appname_dict.values():
+                        search_by_name = next((k for k, v in appname_dict.items() if v == search_by_name), None)
+
                     if search_by_name in sorted_apps:
-                        sorted_apps = [app for app in sorted_apps if app == search_by_name]
+                        filtered_apps = []
+                        for app in sorted_apps:
+                            if app == search_by_name:
+                                filtered_apps.append(app)
+                        sorted_apps = filtered_apps
                     else:
                         sorted_apps.clear()
                         self.no_results_label.grid()
@@ -589,7 +594,7 @@ class Tabview(ctk.CTkTabview):
         
         while running:
             if quest_list_update:
-                conn = sqlite3.connect('sproutime.db')
+                conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
                 cursor = conn.cursor()
                 
                 try:
@@ -660,7 +665,7 @@ class Tabview(ctk.CTkTabview):
         while running:
             if quest_complete_update:
                 activity_log_dict = {}
-                conn = sqlite3.connect('sproutime.db')
+                conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
                 cursor = conn.cursor()
                 
                 try:
@@ -723,7 +728,7 @@ class Tabview(ctk.CTkTabview):
                 one_week_ago = (today - timedelta(days=7)).strftime('%Y-%m-%d')
                 one_month_ago = (today - timedelta(days=30)).strftime('%Y-%m-%d')
         
-                conn = sqlite3.connect('sproutime.db')
+                conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
                 cursor = conn.cursor()
                 
                 try:
@@ -914,7 +919,11 @@ class Tabview(ctk.CTkTabview):
         tab_list = [tab for tab in constant_tab_list if tab not in quest_list]
         self.tabBox.configure(values=tab_list)
         
-        temp_quest_app = app_list[0]
+        if app_list:
+            temp_quest_app = app_list[0]
+        else:
+            temp_quest_app = ""
+
         temp_quest_tab = tab_list[0]
         
         self.check_for_chrome()
@@ -923,13 +932,14 @@ class Tabview(ctk.CTkTabview):
         self.tabBox.set(value=temp_quest_tab)
     
     def delete_quest(self, app_name):
-        global quest_list_update
+        global quest_list_update, quest_complete_update, treeview_update
         
-        conn = sqlite3.connect('sproutime.db')
+        conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         
         try:
             cursor.execute("DELETE FROM quest WHERE app_name = ?", (app_name,))
+            cursor.execute("DELETE FROM activity_log WHERE app_name = ?", (app_name,))
             conn.commit()
         except sqlite3.Error as e:
             if DEBUG: print(f"An SQL error occurred: {e}")
@@ -940,18 +950,21 @@ class Tabview(ctk.CTkTabview):
         
         quest_list.remove(app_name)
         self.refresh_app_list()
+        progressbar_dict[app_name].set(0)
         
         quest_list_update = True
+        quest_complete_update = True
+        treeview_update = True
 
     def update_quest_frame(self, max_switch, time_slider, current_app, new_name_widget):
-        global quest_list_update, quest_complete_update, app_time_update
+        global quest_list_update, quest_complete_update, app_time_update, treeview_update
         
         app_name = current_app
         maximum = 1 if max_switch.get() == '>' else 0
         minutes = (time_slider.get() * 60)
         new_name = new_name_widget.get().strip()
 
-        conn = sqlite3.connect('sproutime.db')
+        conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         
         try:
@@ -993,42 +1006,44 @@ class Tabview(ctk.CTkTabview):
         quest_list_update = True
         app_time_update = True
         quest_complete_update = True
+        treeview_update = True
         
     def save_quest_time(self):
-        global temp_quest_app, temp_quest_tab, quest_list_update
-        minutes = slider_var.get() * 60
-        name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
-        if switch_var.get() == ">":
-            maximum = 1
-        else:
-            maximum = 0
-            completed_list.append(name)
+        global temp_quest_app, temp_quest_tab, quest_list_update, quest_complete_update, app_time_update, treeview_update
+        if temp_quest_app:
+            minutes = slider_var.get() * 60
+            name = temp_quest_tab if temp_quest_app == google and temp_quest_tab != "Any Tabs" else temp_quest_app
+            if switch_var.get() == ">":
+                maximum = 1
+            else:
+                maximum = 0
+                completed_list.append(name)
 
-        conn = sqlite3.connect('sproutime.db')
-        cursor = conn.cursor()
-        
-        try:
-            cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (name, minutes, maximum))
-            conn.commit()
+            conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
+            cursor = conn.cursor()
             
-            quest_list.append(name)
-            quest_dict[name] = {"maximum": switch_var.get(), "time": minutes * 60}
-            
-            #Check if quest is completed today
-            cursor.execute("DELETE FROM activity_log WHERE date = ? AND app_name = ? AND type = 1", (str(date.today()), name))
-            conn.commit()
+            try:
+                cursor.execute("INSERT INTO quest (app_name, time, maximum) VALUES (?, ?, ?)", (name, minutes, maximum))
+                conn.commit()
+                
+                quest_list.append(name)
+                quest_dict[name] = {"maximum": switch_var.get(), "time": minutes * 60}
+                
+                #Check if quest is completed today
+                cursor.execute("DELETE FROM activity_log WHERE date = ? AND app_name = ? AND type = 1", (str(date.today()), name))
+                conn.commit()
 
-        except sqlite3.Error as e:
-            if DEBUG: print(f"An SQL error occurred: {e}")
-            conn.rollback()
-        finally:
-            if conn:
-                conn.close()
-            
-        check_quest(app_name)
-        self.refresh_app_list()
+            except sqlite3.Error as e:
+                if DEBUG: print(f"An SQL error occurred: {e}")
+                conn.rollback()
+            finally:
+                if conn:
+                    conn.close()
+                
+            check_quest(app_name)
+            self.refresh_app_list()
 
-        quest_list_update = True
+            quest_list_update = True
         
     def refresh_stat(self):
         global stat_update
@@ -1046,6 +1061,12 @@ class Tabview(ctk.CTkTabview):
             secondary_colour = "#515151"
         else:
             secondary_colour = "#979da2"
+        self.theme_frame.configure(fg_color=secondary_colour)
+        self.noti_frame.configure(fg_color=secondary_colour)
+
+        for widget in self.progress_scrollable.winfo_children():
+            widget.configure(fg_color=secondary_colour)
+
         if self.noti_switch.get() == 1:
             allow_noti = True
         else:
@@ -1053,7 +1074,7 @@ class Tabview(ctk.CTkTabview):
         self.noti_switch.configure(text="Enabled" if allow_noti else "Disabled")
 
         try:
-            conn = sqlite3.connect('sproutime.db')
+            conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
             cursor = conn.cursor()
 
             cursor.execute("UPDATE settings SET theme = ?, notifications = ?", (self.theme_selector.get(), allow_noti))
@@ -1116,12 +1137,12 @@ class Tabview(ctk.CTkTabview):
                 show_popup("Error", f"Error writing JSON file: {e}")
     
     def import_quest(self, file_path):
-        global quest_list_update
+        global quest_list_update, quest_list, quest_dict
         
         with open(file_path, 'r') as file:
             json_data = json.load(file)
             
-            conn = sqlite3.connect('sproutime.db')
+            conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
             cursor = conn.cursor()
             
             try:
@@ -1141,6 +1162,22 @@ class Tabview(ctk.CTkTabview):
                     check_quest(quest['app_name'])
                     
                 conn.commit()
+                
+                quest_list = []
+                quest_dict = {}
+                
+                cursor.execute("SELECT app_name, maximum, time FROM quest")
+                quests = cursor.fetchall()
+                
+                for app, sign, time in quests:
+                    if sign == 1:
+                        maximum = ">" 
+                    else:
+                        maximum = "<"
+                        completed_list.append(app)
+                    quest_list.append(app)
+                    quest_dict[app] = {"maximum": maximum, "time": time * 60}
+                    
             except sqlite3.Error as e:
                 if DEBUG: print(f"An SQL error occurred: {e}")
                 conn.rollback()
@@ -1151,7 +1188,7 @@ class Tabview(ctk.CTkTabview):
             quest_list_update = True
     
     def export_quest(self):
-        conn = sqlite3.connect('sproutime.db')
+        conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         
         try:
@@ -1338,7 +1375,7 @@ class DebugMenu(ctk.CTkToplevel):
         self.time_speed_checkbox.grid(row=0, column=1, padx=20, pady=10, sticky='e')
         
         #Clear data
-        conn = sqlite3.connect('sproutime.db')
+        conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         
         try:
@@ -1374,9 +1411,9 @@ class DebugMenu(ctk.CTkToplevel):
         self.import_app_data_button.grid(row=5, column=0, padx=20, pady=10, sticky='ew', columnspan = 2)
 
     def clear_data(self, table):
-        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
+        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list, treeview_update
         
-        conn = sqlite3.connect('sproutime.db')
+        conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         
         try:
@@ -1404,11 +1441,12 @@ class DebugMenu(ctk.CTkToplevel):
         app_time_update = True
         quest_list_update = True
         quest_complete_update = True
+        treeview_update = True
             
     def reset_database(self):
-        global app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
+        global treeview_update, app_time_update, quest_complete_update, quest_list_update, app_dict, quest_list, quest_dict, completed_list, failed_list, appname_dict, old_name_list
         
-        conn = sqlite3.connect('sproutime.db')
+        conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         
         try:
@@ -1442,9 +1480,10 @@ class DebugMenu(ctk.CTkToplevel):
         app_time_update = True
         quest_list_update = True
         quest_complete_update = True
+        treeview_update = True
         
     def export_app_data(self):
-        conn = sqlite3.connect('sproutime.db')
+        conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
         cursor = conn.cursor()
         
         try:
@@ -1507,12 +1546,12 @@ class DebugMenu(ctk.CTkToplevel):
                 show_popup("Error", f"Error writing JSON file: {e}")
     
     def import_app_data(self, file_path):
-        global app_time_update, quest_list_update, quest_complete_update, stat_update
+        global app_time_update, quest_list_update, quest_complete_update, stat_update, treeview_update
         
         with open(file_path, 'r') as file:
             json_data = json.load(file)
             
-            conn = sqlite3.connect('sproutime.db')
+            conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
             cursor = conn.cursor()
             
             try:
@@ -1548,12 +1587,62 @@ class DebugMenu(ctk.CTkToplevel):
             quest_list_update = True
             quest_complete_update = True
             stat_update = True
+            treeview_update = True
         
     def close_debug_menu(self):
         self.destroy() 
 
+# PyInstaller creates a temp folder and stores path in _MEIPASS
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+#Configuration
+APP_NAME = "Sproutime" 
+DATABASE_FILENAME = "sproutime.db"
+DB_RELATIVE_PATH = os.path.join("database", DATABASE_FILENAME)
+
+#Get Writable App Data Directory
+def get_app_data_dir(app_name):
+    if sys.platform == "darwin":
+        app_support_dir = os.path.join(os.path.expanduser("~"), "Library", "Application Support")
+    elif sys.platform == 'win32':
+        app_support_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "Sproutime")
+
+    app_dir = os.path.join(app_support_dir, app_name)
+    os.makedirs(app_dir, exist_ok=True) # Create the directory if it doesn't exist
+    return app_dir
+
+#Database Setup
+def get_database_connection(app_name, db_relative_path, db_filename):
+    app_data_dir = get_app_data_dir(app_name)
+    writable_db_path = os.path.join(app_data_dir, db_filename)
+
+    # Check if the database already exists in the writable location
+    if not os.path.exists(writable_db_path):
+        # Get the path to the bundled database
+        db_source_path = resource_path(db_relative_path)
+
+        if not os.path.exists(db_source_path):
+            raise FileNotFoundError(
+                f"Bundled database '{db_source_path}' not found! "
+                "Ensure it's added correctly with --add-data."
+            )
+
+        # Copy the bundled database to the writable location
+        try:
+            shutil.copy2(db_source_path, writable_db_path)
+        except Exception as e:
+            raise IOError(f"Failed to copy database from {db_source_path} to {writable_db_path}: {e}")
+        
+    conn = sqlite3.connect(writable_db_path)
+    return conn
+
 def setup_sql():   
-    conn = sqlite3.connect('sproutime.db')
+    conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
     cursor = conn.cursor()
  
     try:
@@ -1648,7 +1737,7 @@ def get_all_app_list():
         
         for app in running_app:
             launch_date = app.launchDate()
-            if not app.isHidden() and launch_date:
+            if (not app.isHidden() and launch_date) and (not app.localizedName() == "Sproutime"):
                 app_list.append(app.localizedName())
                 
     elif sys.platform == 'win32':
@@ -1660,7 +1749,7 @@ def get_all_app_list():
 
                 if foundPID == pid and win32gui.IsWindowVisible(handle):
                     process_name = process.info["name"]
-                    if process_name not in ignored_processes:
+                    if (process_name not in ignored_processes) and (process_name != "Sproutime.exe"):
                         app_name = process_name.split(".")[0].capitalize() # Get all active app name
                         if app_name not in app_list:
                             app_list.append(app_name)
@@ -1755,7 +1844,7 @@ def load_past_data():
     completed_list = []
     failed_list = []
     
-    conn = sqlite3.connect('sproutime.db')
+    conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
     cursor = conn.cursor()
     
     try:
@@ -1830,7 +1919,7 @@ def update_time():
             sleep(1)
 
 def check_quest(app_name):
-    global quest_complete_update
+    global quest_complete_update, treeview_update
     
     if (quest_list) and (app_name in quest_list):
         task_score = determine_score()
@@ -1838,14 +1927,13 @@ def check_quest(app_name):
         if (app_name in app_dict):
             if quest_dict[app_name]["time"] <= app_dict[app_name]:
                 if (quest_dict[app_name]["maximum"] == ">") and (app_name not in completed_list):
-                    conn = sqlite3.connect('sproutime.db')
+                    conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
                     cursor = conn.cursor()
                     
                     try:
-                        cursor.execute("SELECT time, maximum FROM quest WHERE app_name = ?", (app_name,))
+                        cursor.execute("SELECT time FROM quest WHERE app_name = ?", (app_name,))
                         quest = cursor.fetchone()
                         quest_time = quest[0]
-                        maximum = quest[1]
                         current_time = datetime.now().strftime("%H:%M:%S")
                         
                         cursor.execute("SELECT COUNT(*) FROM activity_log WHERE app_name = ? AND date = ? AND type = 1", (app_name, str(date.today())))
@@ -1867,7 +1955,7 @@ def check_quest(app_name):
                     failed_list.append(app_name)
                     completed_list.remove(app_name)
                     
-                    conn = sqlite3.connect('sproutime.db')
+                    conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
                     cursor = conn.cursor()
                     
                     try:
@@ -1886,15 +1974,13 @@ def check_quest(app_name):
                             conn.close()
                     
                     notify(app_name, "max time failed")
-
-                quest_complete_update = True
             
             # 10 mins left till quest failed
             elif ((quest_dict[app_name]["time"] - 600) == app_dict[app_name]) and (quest_dict[app_name]["maximum"] == "<"):
                 notify(app_name, "10 mins left")
                 
             elif (quest_dict[app_name]["time"] > app_dict[app_name]) and (quest_dict[app_name]["maximum"] == "<"):
-                conn = sqlite3.connect('sproutime.db')
+                conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
                 cursor = conn.cursor()
                 
                 try:
@@ -1914,7 +2000,7 @@ def check_quest(app_name):
                         conn.close()
                 
         elif (quest_dict[app_name]["maximum"] == "<") and (app_name not in completed_list):
-            conn = sqlite3.connect('sproutime.db')
+            conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
             cursor = conn.cursor()
 
             try:
@@ -1936,9 +2022,11 @@ def check_quest(app_name):
                     conn.close()
                 
             completed_list.append(app_name)
+        quest_complete_update = True
+        treeview_update = True
 
 def determine_score():
-    conn = sqlite3.connect('sproutime.db')
+    conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
     cursor = conn.cursor()
     
     current_streak = 0
@@ -1966,14 +2054,14 @@ def determine_score():
         score = 100
     
     #Streak Multiplier
-    multiplier = 1 + ((current_streak // 7) + 1) * 0.1
+    multiplier = 1 + (current_streak // 7) * 0.1
     score = math.floor(score * multiplier)
 
     return score
     
 def update_log(today):
     global app_dict, completed_list, failed_list
-    conn = sqlite3.connect('sproutime.db')
+    conn = get_database_connection(APP_NAME, DB_RELATIVE_PATH, DATABASE_FILENAME)
     cursor = conn.cursor()
     
     try:
@@ -2119,6 +2207,7 @@ app_time_update = True
 quest_list_update = True
 quest_complete_update = True
 stat_update = True
+treeview_update = True
 
 #First load
 running = True
@@ -2133,7 +2222,10 @@ theme_options = ["Dark", "Light", "System"]
 allow_noti = True
 theme = "Dark"
 secondary_colour = "#515151"
-temp_quest_app = app_list[0]
+if app_list:
+    temp_quest_app = app_list[0]
+else:
+    temp_quest_app = ""
 temp_quest_tab = tab_list[0]
 
 p1 = threading.Thread(target=update_time)
