@@ -1,3 +1,4 @@
+import subprocess
 import sys
 import math
 
@@ -273,6 +274,15 @@ class Tabview(ctk.CTkTabview):
         #Refresh Button
         self.refresh_stat_button = ctk.CTkButton(self.stat_tab, text="Refresh", command=self.refresh_stat, width=200)
         self.refresh_stat_button.pack(pady=20, padx=10, expand=True)
+
+    def restart_program(self):
+        """Restart the current program."""
+        if sys.platform == 'darwin':
+            subprocess.Popen(['open', '-n', '-a', 'Sproutime.app'])
+        elif sys.platform == 'win32':
+            subprocess.Popen([sys.executable, __file__])
+        self.destroy()
+        os._exit(0)
         
     def create_setting_widgets(self):
         global allow_noti, theme, secondary_colour
@@ -340,7 +350,7 @@ class Tabview(ctk.CTkTabview):
         
         #Debug Button
         self.debug_button = ctk.CTkButton(self.settings_frame, text="Debug", command=self.open_debug_menu)
-        self.debug_button.grid(row=4, pady=50)
+        self.debug_button.grid(row=5, pady=50)
 
         self.settings_frame.grid_columnconfigure(0, weight=1)
         self.settings_frame.grid_columnconfigure(0, weight=1)
@@ -351,21 +361,35 @@ class Tabview(ctk.CTkTabview):
         for row in range(1):
             self.setting_tab.grid_rowconfigure(row, weight=1)
 
+        #Restart Button
+        self.restart_button = ctk.CTkButton(self.settings_frame, text="Restart", command=self.restart_program)
+        self.restart_button.grid(row=4, pady=50)
+
     def create_treeview_widgets(self):
         self.treeview_tab = self.add("Garden")
+        # Create a frame for the treeview
         self.treeview_frame = ctk.CTkFrame(self.treeview_tab)
         self.treeview_frame.pack(padx=10, pady=10, fill="both", expand=True)
         self.treeview_frame.columnconfigure(0, weight=1)
         
-        # show treepoint in label
-        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Points: ", font=(None, 15, "bold"))
-        self.treeview_label.pack(pady=10)
+        # show current_time
+        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text=" Sync... ", font=(None, 15, "bold"), 
+                                               fg_color=secondary_colour)
+        
+        self.current_time_label.pack(pady=10)
+
+        # show point in label
+        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f" Point:  ", font=(None, 15, "bold"), 
+                                           fg_color=secondary_colour)
+        
+        self.treeview_label.pack(pady=10)        
         
     def display_image(self, parent, image_path):
+        """Display an image in the specified parent widget."""
         try:
             img = Image.open(image_path)
             img = img.resize((750, 450), Image.Resampling.LANCZOS)
-            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(750, 450))
+            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(875, 475))
             label = ctk.CTkLabel(parent, image=photo, text="")
             label.image = photo  # Keep a reference!
             label.pack(pady=20)
@@ -375,12 +399,12 @@ class Tabview(ctk.CTkTabview):
         
         # only show one image only
         for widget in parent.winfo_children():
-            if isinstance(widget, ctk.CTkLabel) and widget != label:
+            if isinstance(widget, ctk.CTkLabel) and widget != label: # Check if it is not the current label
                 widget.destroy()
                 
     def update_treeview(self):
         # update treeview with point
-        global running, treeview_update
+        global running, quest_complete_update, secondary_colour, treeview_update
         
         # point_earn from quest_completion
         if running:
@@ -401,9 +425,9 @@ class Tabview(ctk.CTkTabview):
                         conn.close()
 
                 # update label with point
-                self.treeview_label.configure(text=f"Point: {point}")
+                self.treeview_label.configure(text=f" Point: {point} ", 
+                                              fg_color=secondary_colour)
 
-                # Check if the current theme is dark or light
                 # Get the current appearance mode as "dark" or "light"
                 current_theme = ctk.get_appearance_mode().lower()
                 
@@ -421,6 +445,16 @@ class Tabview(ctk.CTkTabview):
                         self.display_image(self.treeview_tab, resource_path(os.path.join("img", "tree6_day.jpg")))
 
                 treeview_update = False
+
+            # Update label
+            if quest_complete_update:
+                self.update_timelabel()
+
+    def update_timelabel(self):
+        self.current_time_label.configure(text=f" Today: {str(date.today())}  ", 
+                                          fg_color=secondary_colour) # update label and fg_color
+        
+
 
     def update_progress(self):
         global running, app_time_update, sort_type, search_by_name, secondary_colour
