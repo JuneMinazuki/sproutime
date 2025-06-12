@@ -423,7 +423,7 @@ class Tabview(ctk.CTkTabview):
                         conn.close()
 
                 # update label with point
-                self.treeview_label.configure(text=f" Point: {point} ")
+                self.treeview_label.configure(text=f" Point: {point} ", font=(None, 15, "bold"))
                 # Get the current appearance mode as "dark" or "light"
                 current_theme = ctk.get_appearance_mode().lower()
                 
@@ -447,7 +447,7 @@ class Tabview(ctk.CTkTabview):
                 self.update_timelabel()
 
     def update_timelabel(self):
-        self.current_time_label.configure(text=f" Today: {str(date.today())}  ") 
+        self.current_time_label.configure(text=f" Today: {str(date.today())}  ", font=(None, 15, "bold")) 
        
     def update_progress(self):
         global running, app_time_update, sort_type, search_by_name, secondary_colour
