@@ -7,11 +7,11 @@ Traditional app usage limiting solutions often focus solely on restrictions with
 
 * **Set Daily Quests:** Navigate to the "Quest" tab to define daily time limits or usage goals for individual applications. For example, set a quest to "Use a learning app for 1 hour."
 
-* **View App Usage:** The "Stat" section displays your app usage in an intuitive pie chart, allowing you to see where your time is spent.
+* **View App Usage:** The "Stats" section displays your app usage in an intuitive pie chart, allowing you to see where your time is spent.
 
 * **Quest Completion Notifications:** Receive immediate, friendly notifications on your desktop when you successfully complete a quest, providing positive reinforcement.
 
-* **Import/Export Data:** Use the "Setting" menu to import quest configurations and usage data from another device or export your current data for backup or transfer.
+* **Import/Export Data:** Use the "Settings" menu to import quest configurations and usage data from another device or export your current data for backup or transfer.
 
 * **Watch Your Tree Grow:** In the "Garden" section, observe your virtual tree flourish and grow as you complete more quests, visually rewarding your progress.
 
@@ -60,9 +60,9 @@ pyinstaller --windowed --name Sproutime --add-data "img;img" --add-data "databas
 
 ## 📸 Screenshots
 
-<img width="1230" alt="Screenshot 2025-06-11 at 10 17 42 PM" src="https://github.com/user-attachments/assets/48ccfdf2-13cd-4682-8ee0-93fb9619eaff" />
-<img width="1238" alt="Screenshot 2025-06-11 at 10 16 43 PM" src="https://github.com/user-attachments/assets/35f5defe-cd92-46e1-bc70-66215fd12713" />
-<img width="1191" alt="Screenshot 2025-06-11 at 10 14 47 PM" src="https://github.com/user-attachments/assets/0ae4a934-ab9b-46a1-a8ed-0cb8985a3c1a" />
-<img width="1181" alt="Screenshot 2025-06-11 at 10 15 46 PM" src="https://github.com/user-attachments/assets/c1d32c06-eebe-464f-b775-3b5d0674e9a1" />
-<img width="1182" alt="Screenshot 2025-06-11 at 10 16 26 PM" src="https://github.com/user-attachments/assets/ef6603ea-f906-4712-9fe5-57c2030a10da" />
-<img width="1237" alt="Screenshot 2025-06-11 at 10 17 35 PM" src="https://github.com/user-attachments/assets/16f93623-6b4b-423c-9bd2-a9d9c46e17d7" />
+<img width="1182" alt="Progress Tab" src="https://github.com/user-attachments/assets/ef6603ea-f906-4712-9fe5-57c2030a10da" />
+<img width="1181" alt="Quest Tab" src="https://github.com/user-attachments/assets/c1d32c06-eebe-464f-b775-3b5d0674e9a1" />
+<img width="1230" alt="Activity Tab" src="https://github.com/user-attachments/assets/48ccfdf2-13cd-4682-8ee0-93fb9619eaff" />
+<img width="1191" alt="Stats Tab" src="https://github.com/user-attachments/assets/0ae4a934-ab9b-46a1-a8ed-0cb8985a3c1a" />
+<img width="1238" alt="Settings Tab" src="https://github.com/user-attachments/assets/35f5defe-cd92-46e1-bc70-66215fd12713" />
+<img width="1237" alt="Garden Tab" src="https://github.com/user-attachments/assets/16f93623-6b4b-423c-9bd2-a9d9c46e17d7" />
