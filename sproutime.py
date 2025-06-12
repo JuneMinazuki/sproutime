@@ -373,11 +373,15 @@ class Tabview(ctk.CTkTabview):
         self.treeview_frame.columnconfigure(0, weight=1)
         
         # show current_time
-        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text=" Sync... ", font=(None, 15, "bold"), fg_color=secondary_colour)
+        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text=" Sync... ", font=(None, 15, "bold"), 
+                                               fg_color=secondary_colour)
+        
         self.current_time_label.pack(pady=10)
 
         # show point in label
-        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f" Point:  ", font=(None, 15, "bold"), fg_color=secondary_colour)
+        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f" Point:  ", font=(None, 15, "bold"), 
+                                           fg_color=secondary_colour)
+        
         self.treeview_label.pack(pady=10)        
         
     def display_image(self, parent, image_path):
@@ -421,7 +425,8 @@ class Tabview(ctk.CTkTabview):
                         conn.close()
 
                 # update label with point
-                self.treeview_label.configure(text=f" Point: {point} ", fg_color=secondary_colour)
+                self.treeview_label.configure(text=f" Point: {point} ", 
+                                              fg_color=secondary_colour)
 
                 # Get the current appearance mode as "dark" or "light"
                 current_theme = ctk.get_appearance_mode().lower()
@@ -446,7 +451,8 @@ class Tabview(ctk.CTkTabview):
                 self.update_timelabel()
 
     def update_timelabel(self):
-        self.current_time_label.configure(text=f" Today: {str(date.today())}  ", fg_color=secondary_colour) # update label and fg_color
+        self.current_time_label.configure(text=f" Today: {str(date.today())}  ", 
+                                          fg_color=secondary_colour) # update label and fg_color
         
 
 
