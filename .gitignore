@@ -8,3 +8,5 @@ dist
 *.icns
 *.ico
 .DS_Store
+.db
+database
