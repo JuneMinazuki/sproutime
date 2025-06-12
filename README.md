@@ -40,7 +40,7 @@ pip install pyinstaller
 
 3. Run the following line in your terminal
 ```
-pyinstaller --onefile --windowed --name Sproutime --add-data "img;img" sproutime.py
+pyinstaller --windowed --name Sproutime --add-data "img;img" --add-data "database/sproutime.db;database" sproutime.py
 ```
 
 ## 💡 Usage
