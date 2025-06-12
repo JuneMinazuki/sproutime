@@ -366,6 +366,7 @@ class Tabview(ctk.CTkTabview):
 
     def create_treeview_widgets(self):
         self.treeview_tab = self.add("Garden")
+        # Create a frame for the treeview
         self.treeview_frame = ctk.CTkFrame(self.treeview_tab)
         self.treeview_frame.pack(padx=10, pady=10, fill="both", expand=True)
         self.treeview_frame.columnconfigure(0, weight=1)
@@ -374,7 +375,7 @@ class Tabview(ctk.CTkTabview):
         self.current_time_label = ctk.CTkLabel(self.treeview_frame, text=" Sync... ", font=(None, 15, "bold"), fg_color=secondary_colour)
         self.current_time_label.pack(pady=10)
 
-        # show treepoint in label
+        # show point in label
         self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f" Point:  ", font=(None, 15, "bold"), fg_color=secondary_colour)
         self.treeview_label.pack(pady=10)        
         
@@ -393,12 +394,12 @@ class Tabview(ctk.CTkTabview):
         
         # only show one image only
         for widget in parent.winfo_children():
-            if isinstance(widget, ctk.CTkLabel) and widget != label:
+            if isinstance(widget, ctk.CTkLabel) and widget != label: # Check if it is not the current label
                 widget.destroy()
                 
     def update_treeview(self):
         # update treeview with point
-        global running, quest_complete_update
+        global running, quest_complete_update, secondary_colour
         
         # point_earn from quest_completion
         if running:
@@ -425,23 +426,28 @@ class Tabview(ctk.CTkTabview):
                 current_theme = ctk.get_appearance_mode().lower()
                 
                 # update image with your own image path
+
+                # dark mode
                 if current_theme == "dark":
                     if point < 700:
                         self.display_image(self.treeview_tab, f"img/tree{point // 100}_night.jpg")
                     else:
                         self.display_image(self.treeview_tab, "img/tree6_night.jpg")
-                        
+
+                # light mode                        
                 elif current_theme == "light":
                     if point < 700:
                         self.display_image(self.treeview_tab, f"img/tree{point // 100}_day.jpg")
                     else:
                         self.display_image(self.treeview_tab, "img/tree6_day.jpg")
 
+
+            # Update label
             if quest_complete_update:
                 self.update_timelabel()
 
     def update_timelabel(self):
-        self.current_time_label.configure(text=f" Today: {str(date.today())}  ", fg_color=secondary_colour)
+        self.current_time_label.configure(text=f" Today: {str(date.today())}  ", fg_color=secondary_colour) # update label and fg_color
         
 
 
