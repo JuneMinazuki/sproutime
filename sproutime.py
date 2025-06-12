@@ -399,7 +399,10 @@ class Tabview(ctk.CTkTabview):
         for widget in parent.winfo_children():
             if isinstance(widget, ctk.CTkLabel) and widget != label: # Check if it is not the current label
                 widget.destroy()
-                
+
+    def update_timelabel(self):
+        self.current_time_label.configure(text=f" Today: {str(date.today())}  ", font=(None, 15, "bold")) 
+
     def update_treeview(self):
         # update treeview with point
         global running, quest_complete_update, treeview_update
@@ -445,9 +448,6 @@ class Tabview(ctk.CTkTabview):
             # Update label
             if quest_complete_update:
                 self.update_timelabel()
-
-    def update_timelabel(self):
-        self.current_time_label.configure(text=f" Today: {str(date.today())}  ", font=(None, 15, "bold")) 
        
     def update_progress(self):
         global running, app_time_update, sort_type, search_by_name, secondary_colour
