@@ -373,8 +373,13 @@ class Tabview(ctk.CTkTabview):
         # show treepoint in label
         self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: ", font=(None, 15, "bold"))
         self.treeview_label.pack(pady=10)
+
+        # show current_time
+        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text=f"Current Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", font=(None, 15, "bold"))
+        self.current_time_label.pack(pady=10)
         
     def display_image(self, parent, image_path):
+        """Display an image in the specified parent widget."""
         try:
             img = Image.open(image_path)
             img = img.resize((750, 450), Image.Resampling.LANCZOS)
@@ -433,6 +438,17 @@ class Tabview(ctk.CTkTabview):
                     else:
                         self.display_image(self.treeview_tab, "img/tree6_day.jpg")
 
+        # Update the current time label every second
+        self.current_time_label.configure(text=f"Current Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        while running:
+            if quest_complete_update:
+                self.update_timelabel()
+            
+
+    def update_timelabel(self):
+        self.current_time_label.configure(text=f"Current Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
 
 
 
