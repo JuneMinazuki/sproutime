@@ -28,7 +28,7 @@ pip install pyinstaller
 git clone https://github.com/JuneMinazuki/sproutime.git
 ```
 
-3. Run the following line in your terminal
+3. Build the app using terminal
 ```
 pyinstaller --windowed --name Sproutime --add-data img:img --add-data database/sproutime.db:database sproutime.py
 ```
@@ -44,7 +44,7 @@ pip install pyinstaller
 git clone https://github.com/JuneMinazuki/sproutime.git
 ```
 
-3. Run the following line in your terminal
+3. Build the app using powershell
 ```
 pyinstaller --windowed --name Sproutime --add-data "img;img" --add-data "database/sproutime.db;database" sproutime.py
 ```
