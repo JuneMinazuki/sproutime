@@ -371,11 +371,11 @@ class Tabview(ctk.CTkTabview):
         self.treeview_frame.columnconfigure(0, weight=1)
         
         # show current_time
-        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text="Sync...", font=(None, 15, "bold"))
+        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text=" Sync... ", font=(None, 15, "bold"), fg_color=secondary_colour)
         self.current_time_label.pack(pady=10)
 
         # show treepoint in label
-        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f"Point: ", font=(None, 15, "bold"))
+        self.treeview_label = ctk.CTkLabel(self.treeview_frame, text=f" Point:  ", font=(None, 15, "bold"), fg_color=secondary_colour)
         self.treeview_label.pack(pady=10)        
         
     def display_image(self, parent, image_path):
@@ -383,7 +383,7 @@ class Tabview(ctk.CTkTabview):
         try:
             img = Image.open(image_path)
             img = img.resize((750, 450), Image.Resampling.LANCZOS)
-            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(750, 450))
+            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(875, 475))
             label = ctk.CTkLabel(parent, image=photo, text="")
             label.image = photo  # Keep a reference!
             label.pack(pady=20)
@@ -419,9 +419,8 @@ class Tabview(ctk.CTkTabview):
                         conn.close()
 
                 # update label with point
-                self.treeview_label.configure(text=f"Point: {point}")
+                self.treeview_label.configure(text=f" Point: {point} ", fg_color=secondary_colour)
 
-                # Check if the current theme is dark or light
                 # Get the current appearance mode as "dark" or "light"
                 current_theme = ctk.get_appearance_mode().lower()
                 
@@ -438,16 +437,11 @@ class Tabview(ctk.CTkTabview):
                     else:
                         self.display_image(self.treeview_tab, "img/tree6_day.jpg")
 
-        
-        # Update current time every second
-        while running:
             if quest_complete_update:
                 self.update_timelabel()
-        sleep(1)
-            
 
     def update_timelabel(self):
-        self.current_time_label.configure(text=f"Today: {str(date.today())}")
+        self.current_time_label.configure(text=f" Today: {str(date.today())}  ", fg_color=secondary_colour)
         
 
 
