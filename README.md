@@ -23,7 +23,10 @@ Follow these steps to get a copy of the project up and running on your local mac
 pip install pyinstaller
 ```
    
-2. Download the 'sproutime.py' and 'img' folder
+2. Clone the repository
+```
+git clone https://github.com/JuneMinazuki/sproutime.git
+```
 
 3. Run the following line in your terminal
 ```
@@ -36,7 +39,10 @@ pyinstaller --windowed --name Sproutime --add-data img:img --add-data database/s
 pip install pyinstaller
 ```
 
-2. Download the 'sproutime.py' and 'img' folder
+2. Clone the repository
+```
+git clone https://github.com/JuneMinazuki/sproutime.git
+```
 
 3. Run the following line in your terminal
 ```
