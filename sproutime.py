@@ -371,7 +371,7 @@ class Tabview(ctk.CTkTabview):
         self.treeview_frame.columnconfigure(0, weight=1)
         
         # show current_time
-        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text=f"Current Time: ", font=(None, 15, "bold"))
+        self.current_time_label = ctk.CTkLabel(self.treeview_frame, text="Sync...", font=(None, 15, "bold"))
         self.current_time_label.pack(pady=10)
 
         # show treepoint in label
@@ -447,7 +447,7 @@ class Tabview(ctk.CTkTabview):
             
 
     def update_timelabel(self):
-        self.current_time_label.configure(text=f"Current Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        self.current_time_label.configure(text=f"Today: {str(date.today())}")
         
 
 
