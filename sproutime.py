@@ -438,8 +438,6 @@ class Tabview(ctk.CTkTabview):
                     else:
                         self.display_image(self.treeview_tab, "img/tree6_day.jpg")
 
-        # Update the current time label every second
-        self.current_time_label.configure(text=f"Current Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
         while running:
             if quest_complete_update:
