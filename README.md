@@ -4,7 +4,7 @@ A desktop application that tracks application screen time, allows users to set u
 Traditional app usage limiting solutions often focus solely on restrictions without offering positive reinforcement; our app provides an innovative solution by integrating both.
 
 ## 🛠 Installation
-[![Windows](https://img.shields.io/badge/-Windows_x64-blue.svg?style=for-the-badge&logo=windows)](https://github.com/JuneMinazuki/sproutime/releases)
+[![Windows](https://img.shields.io/badge/-Windows_x64-blue.svg?style=for-the-badge&logo=windows)](https://github.com/JuneMinazuki/sproutime/releases/download/V1.0/Sproutime.zip)
 [![MacOS](https://img.shields.io/badge/-MacOS-lightblue.svg?style=for-the-badge&logo=apple)](https://github.com/JuneMinazuki/sproutime/releases/download/V1.0/Sproutime.dmg)
 [![Source Tarball](https://img.shields.io/badge/-Source_tar-green.svg?style=for-the-badge)](https://github.com/JuneMinazuki/sproutime/archive/refs/tags/V1.0.tar.gz) 
 
